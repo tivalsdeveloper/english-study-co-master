@@ -32,6 +32,9 @@ export default function RootLayout({
           data-cfasync="false"
           strategy="afterInteractive"
         />
+        <Script id="monetag-rewarded-zone" strategy="afterInteractive">
+          {`(function(s){s.dataset.zone='11786694';s.src='https://nap5k.com/tag.min.js'})([document.documentElement, document.body].filter(Boolean).pop().appendChild(document.createElement('script')))`}
+        </Script>
       </body>
     </html>
   );
