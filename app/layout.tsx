@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Script from "next/script";
 import "./globals.css";
 import "./otp.css";
 import "./group-room.css";
@@ -23,7 +24,25 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className="antialiased">{children}</body>
+      <body className="antialiased">
+        <Script id="ai-tutor-supabase-route" strategy="beforeInteractive">{`
+          (() => {
+            const originalFetch = window.fetch.bind(window);
+            const oldEndpoint = "https://english-study-co-master.netlify.app/.netlify/functions/ai-tutor";
+            const newEndpoint = "https://kxuszpixwfecawdeqkrx.supabase.co/functions/v1/ai-tutor";
+            window.fetch = (input, init) => {
+              if (typeof input === "string" && input === oldEndpoint) {
+                return originalFetch(newEndpoint, init);
+              }
+              if (input instanceof Request && input.url === oldEndpoint) {
+                return originalFetch(new Request(newEndpoint, input), init);
+              }
+              return originalFetch(input, init);
+            };
+          })();
+        `}</Script>
+        {children}
+      </body>
     </html>
   );
 }
