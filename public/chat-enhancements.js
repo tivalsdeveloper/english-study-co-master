@@ -3,58 +3,15 @@
   const KEY = "sb_publishable__auyhjNpepXiYdGV5HEJ_A_AGsPbBuS";
   const headers = { apikey: KEY, Authorization: `Bearer ${KEY}`, "Content-Type": "application/json" };
   const qs = (s, r=document) => r.querySelector(s);
-  let currentUser = null;
-  let aiConversation = null;
-
-  async function session() {
-    const keys = Object.keys(localStorage).filter(k => k.startsWith("sb-") && k.endsWith("-auth-token"));
-    for (const k of keys) { try { const x=JSON.parse(localStorage.getItem(k)||"{}"); const s=x?.access_token?x:x?.currentSession; if(s?.user){currentUser=s.user; headers.Authorization=`Bearer ${s.access_token}`; return s;} } catch{} }
-    return null;
-  }
-  async function rest(path, init={}) { return fetch(`${SUPABASE}/rest/v1/${path}`, { ...init, headers:{...headers,...(init.headers||{})} }); }
-
-  async function ensureConversation() {
-    if (!currentUser) return null;
-    if (aiConversation) return aiConversation;
-    const r=await rest(`english_ai_conversations?user_id=eq.${currentUser.id}&order=updated_at.desc&limit=1&select=id`);
-    if(r.ok){const rows=await r.json(); if(rows[0]) return aiConversation=rows[0].id;}
-    const c=await rest("english_ai_conversations",{method:"POST",headers:{Prefer:"return=representation"},body:JSON.stringify({user_id:currentUser.id,title:"AI English Tutor"})});
-    if(c.ok){const rows=await c.json(); aiConversation=rows[0]?.id;}
-    return aiConversation;
-  }
-
-  async function saveAi(role, content) {
-    if(!currentUser || !content?.trim()) return;
-    const conversation_id=await ensureConversation(); if(!conversation_id)return;
-    await rest("english_ai_messages",{method:"POST",body:JSON.stringify({conversation_id,user_id:currentUser.id,role,content:content.trim()})});
-    await rest(`english_ai_conversations?id=eq.${conversation_id}`,{method:"PATCH",body:JSON.stringify({updated_at:new Date().toISOString()})});
-  }
-
-  async function restoreAi() {
-    const box=qs(".ai-messages"); if(!box || !currentUser || box.dataset.restored)return;
-    box.dataset.restored="1"; const id=await ensureConversation(); if(!id)return;
-    const r=await rest(`english_ai_messages?conversation_id=eq.${id}&order=created_at.asc&limit=100&select=role,content`); if(!r.ok)return;
-    const rows=await r.json(); if(!rows.length)return;
-    box.innerHTML=""; rows.forEach(m=>{const a=document.createElement("article");a.className=m.role;a.innerHTML=`<b>${m.role==="assistant"?"AI Tutor":"You"}</b><p></p>`;qs("p",a).textContent=m.content;box.appendChild(a);}); box.scrollTop=box.scrollHeight;
-  }
-
-  function observeAi() {
-    const box=qs(".ai-messages"); if(!box || box.dataset.watched)return;
-    box.dataset.watched="1"; restoreAi();
-    new MutationObserver(ms=>ms.forEach(m=>m.addedNodes.forEach(n=>{if(!(n instanceof HTMLElement)||!n.matches("article.user,article.assistant")||n.classList.contains("ai-thinking"))return;const text=qs("p",n)?.textContent||"";if(text && !n.dataset.saved){n.dataset.saved="1";saveAi(n.classList.contains("user")?"user":"assistant",text);}}))).observe(box,{childList:true});
-  }
-
-  function enhanceChat() {
-    const chat=qs("aside.chat.room"); if(!chat || chat.dataset.enhanced)return;
-    chat.dataset.enhanced="1";
-    const header=qs(":scope > header",chat); if(!header)return;
-    const controls=document.createElement("div"); controls.className="chat-extra-controls";
-    const full=document.createElement("button"); full.type="button"; full.textContent="⛶ Full view"; full.onclick=()=>{chat.classList.toggle("chat-fullscreen");full.textContent=chat.classList.contains("chat-fullscreen")?"↙ Exit full view":"⛶ Full view";};
-    const select=document.createElement("select"); select.title="Automatically delete my new chat messages"; [["never","Keep messages"],["1h","Delete after 1 hour"],["24h","Delete after 24 hours"],["7d","Delete after 7 days"],["30d","Delete after 30 days"]].forEach(([v,t])=>{const o=document.createElement("option");o.value=v;o.textContent=t;select.appendChild(o)}); select.value=localStorage.getItem("english-message-retention")||"never"; select.onchange=()=>localStorage.setItem("english-message-retention",select.value);
-    controls.append(full,select); header.insertBefore(controls,header.lastElementChild);
-    const form=qs(":scope > form",chat); if(form){form.addEventListener("submit",async()=>{const retention=select.value;if(retention==="never"||!currentUser)return;const delays={"1h":3600,"24h":86400,"7d":604800,"30d":2592000};const seconds=delays[retention];const input=qs("input",form);const body=input?.value?.trim();if(!body)return;setTimeout(async()=>{try{await rest(`english_messages?user_id=eq.${currentUser.id}&body=eq.${encodeURIComponent(body)}`,{method:"DELETE"});}catch{}},Math.min(seconds*1000,2147483647));},true);}
-  }
-
-  const style=document.createElement("style");style.textContent=`.chat-extra-controls{display:flex;gap:6px;align-items:center;margin-left:auto}.chat-extra-controls button,.chat-extra-controls select{border:1px solid #d7dce5;background:#fff;border-radius:9px;padding:7px 9px;font-size:12px}.chat-fullscreen{position:fixed!important;inset:0!important;width:100vw!important;height:100dvh!important;max-width:none!important;z-index:100000!important;border-radius:0!important}.chat-fullscreen .messages{max-height:none!important;flex:1!important}@media(max-width:650px){.chat-extra-controls select{max-width:125px}.chat-extra-controls button{font-size:0}.chat-extra-controls button:first-letter{font-size:16px}}`;document.head.appendChild(style);
-  session().finally(()=>{new MutationObserver(()=>{observeAi();enhanceChat();}).observe(document.body,{childList:true,subtree:true});observeAi();enhanceChat();});
+  let currentUser = null, aiConversation = null;
+  async function session(){const keys=Object.keys(localStorage).filter(k=>k.startsWith("sb-")&&k.endsWith("-auth-token"));for(const k of keys){try{const x=JSON.parse(localStorage.getItem(k)||"{}");const s=x?.access_token?x:x?.currentSession;if(s?.user){currentUser=s.user;headers.Authorization=`Bearer ${s.access_token}`;return s}}catch{}}return null}
+  async function rest(path,init={}){return fetch(`${SUPABASE}/rest/v1/${path}`,{...init,headers:{...headers,...(init.headers||{})}})}
+  async function ensureConversation(){if(!currentUser)return null;if(aiConversation)return aiConversation;const r=await rest(`english_ai_conversations?user_id=eq.${currentUser.id}&order=updated_at.desc&limit=1&select=id`);if(r.ok){const rows=await r.json();if(rows[0])return aiConversation=rows[0].id}const c=await rest("english_ai_conversations",{method:"POST",headers:{Prefer:"return=representation"},body:JSON.stringify({user_id:currentUser.id,title:"AI English Tutor"})});if(c.ok){const rows=await c.json();aiConversation=rows[0]?.id}return aiConversation}
+  async function saveAi(role,content){if(!currentUser||!content?.trim())return;const conversation_id=await ensureConversation();if(!conversation_id)return;await rest("english_ai_messages",{method:"POST",body:JSON.stringify({conversation_id,user_id:currentUser.id,role,content:content.trim()})});await rest(`english_ai_conversations?id=eq.${conversation_id}`,{method:"PATCH",body:JSON.stringify({updated_at:new Date().toISOString()})})}
+  function addCopy(article){if(!(article instanceof HTMLElement)||article.querySelector(".ai-copy"))return;const p=qs("p",article);if(!p)return;const b=document.createElement("button");b.type="button";b.className="ai-copy";b.textContent="⧉ Copy";b.onclick=async()=>{try{await navigator.clipboard.writeText(p.textContent||"");b.textContent="✓ Copied";setTimeout(()=>b.textContent="⧉ Copy",1400)}catch{}};article.appendChild(b)}
+  async function restoreAi(){const box=qs(".ai-messages");if(!box||!currentUser||box.dataset.restored)return;box.dataset.restored="1";const id=await ensureConversation();if(!id)return;const r=await rest(`english_ai_messages?conversation_id=eq.${id}&order=created_at.asc&limit=100&select=role,content`);if(!r.ok)return;const rows=await r.json();if(!rows.length)return;box.innerHTML="";rows.forEach(m=>{const a=document.createElement("article");a.className=m.role;a.innerHTML=`<b>${m.role==="assistant"?"AI Tutor":"You"}</b><p></p>`;qs("p",a).textContent=m.content;box.appendChild(a);addCopy(a)});box.scrollTop=box.scrollHeight}
+  function enhanceAi(){const box=qs(".ai-messages");if(!box)return;box.querySelectorAll("article.assistant,article.user").forEach(addCopy);const panel=box.closest(".ai-panel")||box.parentElement?.parentElement;if(panel&&!panel.querySelector(".ai-full-toggle")){const header=panel.querySelector("header");if(header){const b=document.createElement("button");b.type="button";b.className="ai-full-toggle";b.textContent="⛶";b.title="Full view";b.setAttribute("aria-label","Open AI chat full view");b.onclick=()=>{panel.classList.toggle("ai-fullscreen");b.textContent=panel.classList.contains("ai-fullscreen")?"↙":"⛶";b.title=panel.classList.contains("ai-fullscreen")?"Exit full view":"Full view"};header.insertBefore(b,header.lastElementChild)}}if(box.dataset.watched)return;box.dataset.watched="1";restoreAi();new MutationObserver(ms=>ms.forEach(m=>m.addedNodes.forEach(n=>{if(!(n instanceof HTMLElement)||!n.matches("article.user,article.assistant")||n.classList.contains("ai-thinking"))return;addCopy(n);const text=qs("p",n)?.textContent||"";if(text&&!n.dataset.saved){n.dataset.saved="1";saveAi(n.classList.contains("user")?"user":"assistant",text)}}))).observe(box,{childList:true})}
+  function enhanceChat(){const chat=qs("aside.chat.room");if(!chat||chat.dataset.enhanced)return;chat.dataset.enhanced="1";const header=qs(":scope > header",chat);if(!header)return;const controls=document.createElement("div");controls.className="chat-extra-controls";const full=document.createElement("button");full.type="button";full.textContent="⛶ Full view";full.onclick=()=>{chat.classList.toggle("chat-fullscreen");full.textContent=chat.classList.contains("chat-fullscreen")?"↙ Exit full view":"⛶ Full view"};const select=document.createElement("select");select.title="Automatically delete my new chat messages";[["never","Keep messages"],["1h","Delete after 1 hour"],["24h","Delete after 24 hours"],["7d","Delete after 7 days"],["30d","Delete after 30 days"]].forEach(([v,t])=>{const o=document.createElement("option");o.value=v;o.textContent=t;select.appendChild(o)});select.value=localStorage.getItem("english-message-retention")||"never";select.onchange=()=>localStorage.setItem("english-message-retention",select.value);controls.append(full,select);header.insertBefore(controls,header.lastElementChild)}
+  const style=document.createElement("style");style.textContent=`.chat-extra-controls{display:flex;gap:6px;align-items:center;margin-left:auto}.chat-extra-controls button,.chat-extra-controls select,.ai-full-toggle{border:1px solid #d7dce5;background:#fff;border-radius:9px;padding:7px 9px;font-size:12px}.chat-fullscreen,.ai-fullscreen{position:fixed!important;inset:0!important;width:100vw!important;height:100dvh!important;max-width:none!important;max-height:none!important;z-index:100000!important;border-radius:0!important;margin:0!important}.ai-fullscreen{display:flex!important;flex-direction:column!important}.ai-fullscreen .ai-messages{flex:1!important;max-height:none!important;overflow:auto!important}.ai-full-toggle{margin-left:auto;font-size:20px!important;line-height:1}.ai-copy{display:block;margin:8px 0 0 auto;border:0;background:transparent;color:#17634f;font-weight:800;font-size:12px;padding:4px;cursor:pointer}.account-fab{top:88px!important;right:12px!important;transform:scale(.86);transform-origin:top right}.ai-fullscreen~.account-fab,.ai-fullscreen .account-fab{display:none!important}@media(max-width:650px){.chat-extra-controls select{max-width:125px}.chat-extra-controls button{font-size:0}.chat-extra-controls button:first-letter{font-size:16px}.account-fab{top:76px!important;right:8px!important;transform:scale(.78)}}`;document.head.appendChild(style);
+  session().finally(()=>{new MutationObserver(()=>{enhanceAi();enhanceChat()}).observe(document.body,{childList:true,subtree:true});enhanceAi();enhanceChat()});
 })();
