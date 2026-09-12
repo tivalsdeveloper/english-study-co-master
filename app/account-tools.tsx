@@ -30,6 +30,12 @@ export default function AccountTools() {
   }, []);
 
   useEffect(() => {
+    const openFromLogin = () => openReset();
+    window.addEventListener("english-open-forgot-password", openFromLogin);
+    return () => window.removeEventListener("english-open-forgot-password", openFromLogin);
+  }, []);
+
+  useEffect(() => {
     if (!session) { setProfile(null); return; }
     setEmail(session.user.email || "");
     db.from("english_profiles").select("full_name,username,role").eq("id", session.user.id).maybeSingle()
