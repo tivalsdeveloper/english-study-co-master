@@ -1,3 +1,4 @@
+# Builds the application instead of publishing README.md
 name: Deploy English Study Co.Master to GitHub Pages
 
 on:
