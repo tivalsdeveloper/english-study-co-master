@@ -773,7 +773,7 @@ function AiTutor({ close }: { close: () => void }) {
     ]),
     [model, setModel] = useState("free/gemini-3.1-pro");
   useEffect(() => {
-    void fetch("/.netlify/functions/ai-tutor")
+    void fetch("https://english-study-co-master.netlify.app/.netlify/functions/ai-tutor")
       .then((r) => r.json() as Promise<{ models?: { id: string; name: string }[] }>)
       .then((x) => {
         if (x.models?.length) {
@@ -796,7 +796,7 @@ function AiTutor({ close }: { close: () => void }) {
     setBusy(true);
     setError("");
     try {
-      const response = await fetch("/.netlify/functions/ai-tutor", {
+      const response = await fetch("https://english-study-co-master.netlify.app/.netlify/functions/ai-tutor", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ messages: next.slice(-10), model }),
@@ -1720,7 +1720,7 @@ function Chat({
     setError("");
     try {
       const points = (form.elements.namedItem("points") as HTMLInputElement).value;
-      const response = await fetch("/.netlify/functions/ai-tutor", {
+      const response = await fetch("https://english-study-co-master.netlify.app/.netlify/functions/ai-tutor", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ task: "create-assignment", messages: [{ role: "user", content: `Create an assignment about ${topic} for ${group?.level || "English learners"}, worth ${points} marks.` }] }),
@@ -1738,7 +1738,7 @@ function Chat({
     setError("");
     try {
       const context = `Assignment: ${selectedAssignment.title}\nInstructions: ${selectedAssignment.instructions}\nMaximum: ${selectedAssignment.max_points}\nStudent answer: ${submission.answer}`;
-      const response = await fetch("/.netlify/functions/ai-tutor", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ task: "grade-assignment", context, messages: [{ role: "user", content: "Suggest a fair score and helpful feedback." }] }) });
+      const response = await fetch("https://english-study-co-master.netlify.app/.netlify/functions/ai-tutor", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ task: "grade-assignment", context, messages: [{ role: "user", content: "Suggest a fair score and helpful feedback." }] }) });
       const data = await response.json() as { reply?: string; error?: string };
       if (!response.ok || !data.reply) throw new Error(data.error || "AI could not mark this answer.");
       const match = data.reply.match(/SUGGESTED SCORE:\s*(\d+(?:\.\d+)?)/i);
