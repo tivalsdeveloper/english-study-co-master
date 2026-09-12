@@ -15,7 +15,10 @@ export default function AccountTools() {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [profileOpen, setProfileOpen] = useState(false);
   const [forgotOpen, setForgotOpen] = useState(false);
+  const [step, setStep] = useState<"email" | "code" | "password">("email");
   const [email, setEmail] = useState("");
+  const [code, setCode] = useState("");
+  const [password, setPassword] = useState("");
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
@@ -33,14 +36,34 @@ export default function AccountTools() {
       .then(({ data }) => setProfile(data));
   }, [session]);
 
-  async function resetPassword(e: FormEvent) {
-    e.preventDefault();
-    setBusy(true); setError(""); setMessage("");
-    const { error: problem } = await db.auth.resetPasswordForEmail(email.trim(), {
-      redirectTo: window.location.origin,
+  function openReset() {
+    setStep("email"); setCode(""); setPassword(""); setError(""); setMessage(""); setForgotOpen(true);
+  }
+
+  async function sendCode(e: FormEvent) {
+    e.preventDefault(); setBusy(true); setError(""); setMessage("");
+    const { error: problem } = await db.auth.signInWithOtp({
+      email: email.trim(),
+      options: { shouldCreateUser: false },
     });
     if (problem) setError(problem.message);
-    else setMessage("Password reset email sent. Check your inbox and spam folder.");
+    else { setStep("code"); setMessage("Confirmation code sent. Check your email."); }
+    setBusy(false);
+  }
+
+  async function verifyCode(e: FormEvent) {
+    e.preventDefault(); setBusy(true); setError(""); setMessage("");
+    const { error: problem } = await db.auth.verifyOtp({ email: email.trim(), token: code.trim(), type: "email" });
+    if (problem) setError(problem.message);
+    else { setStep("password"); setMessage("Code confirmed. Choose a new password."); }
+    setBusy(false);
+  }
+
+  async function savePassword(e: FormEvent) {
+    e.preventDefault(); setBusy(true); setError(""); setMessage("");
+    const { error: problem } = await db.auth.updateUser({ password });
+    if (problem) setError(problem.message);
+    else { setMessage("Password changed successfully."); setPassword(""); }
     setBusy(false);
   }
 
@@ -51,7 +74,7 @@ export default function AccountTools() {
         <span>{initial}</span><UserRound /><b>Profile</b>
       </button>
     ) : (
-      <button className="forgot-fab" onClick={() => setForgotOpen(true)}><KeyRound /> Forgot password?</button>
+      <button className="forgot-fab" onClick={openReset}><KeyRound /> Forgot password?</button>
     )}
 
     {profileOpen && session && <div className="account-shade">
@@ -62,7 +85,7 @@ export default function AccountTools() {
         <p>@{profile?.username || "learner"}</p>
         <span className="account-role">{profile?.role || "student"}</span>
         <dl><div><dt>Email</dt><dd>{session.user.email}</dd></div><div><dt>Account</dt><dd>Email verified</dd></div></dl>
-        <button className="account-reset" onClick={() => { setProfileOpen(false); setForgotOpen(true); }}><KeyRound /> Change password</button>
+        <button className="account-reset" onClick={() => { setProfileOpen(false); openReset(); }}><KeyRound /> Change password</button>
         <button className="account-signout" onClick={() => db.auth.signOut()}><LogOut /> Sign out</button>
       </section>
     </div>}
@@ -71,14 +94,10 @@ export default function AccountTools() {
       <section className="account-card reset-card">
         <button className="account-close" onClick={() => setForgotOpen(false)}><X /></button>
         <KeyRound className="reset-icon" />
-        <h2>{session ? "Change your password" : "Forgot your password?"}</h2>
-        <p>Enter your account email. We’ll send you a secure password-reset link.</p>
-        <form onSubmit={resetPassword}>
-          <label>Email address<input required type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="you@example.com" /></label>
-          {error && <div className="account-error">{error}</div>}
-          {message && <div className="account-success">{message}</div>}
-          <button disabled={busy}>{busy ? "Sending…" : "Send reset link"}</button>
-        </form>
+        <h2>{step === "email" ? "Reset your password" : step === "code" ? "Enter confirmation code" : "Choose a new password"}</h2>
+        {step === "email" && <><p>Enter your account email. We’ll send a one-time confirmation code instead of a reset link.</p><form onSubmit={sendCode}><label>Email address<input required type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="you@example.com" /></label>{error && <div className="account-error">{error}</div>}<button disabled={busy}>{busy ? "Sending…" : "Send confirmation code"}</button></form></>}
+        {step === "code" && <><p>Enter the confirmation code sent to <b>{email}</b>.</p><form onSubmit={verifyCode}><label>Confirmation code<input required inputMode="numeric" autoComplete="one-time-code" value={code} onChange={e => setCode(e.target.value.replace(/\D/g, "").slice(0, 8))} placeholder="Enter code" /></label>{error && <div className="account-error">{error}</div>}{message && <div className="account-success">{message}</div>}<button disabled={busy}>{busy ? "Checking…" : "Confirm code"}</button></form><button className="account-reset" onClick={() => setStep("email")}>Send another code</button></>}
+        {step === "password" && <><p>Your email is confirmed. Create a new password for this account.</p><form onSubmit={savePassword}><label>New password<input required type="password" minLength={8} value={password} onChange={e => setPassword(e.target.value)} placeholder="At least 8 characters" /></label>{error && <div className="account-error">{error}</div>}{message && <div className="account-success">{message}</div>}<button disabled={busy}>{busy ? "Saving…" : "Save new password"}</button></form></>}
       </section>
     </div>}
   </>;
