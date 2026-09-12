@@ -42,6 +42,7 @@ export default function RootLayout({
           })();
         `}</Script>
         {children}
+        <Script src="/teacher-ai-lessons.js" strategy="afterInteractive" />
       </body>
     </html>
   );
