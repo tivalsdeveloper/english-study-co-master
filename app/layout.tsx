@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Script from "next/script";
 import "./globals.css";
 import "./otp.css";
 import "./group-room.css";
@@ -23,7 +24,15 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className="antialiased">{children}</body>
+      <body className="antialiased">
+        {children}
+        <Script
+          src="https://quge5.com/88/tag.min.js"
+          data-zone="279691"
+          data-cfasync="false"
+          strategy="afterInteractive"
+        />
+      </body>
     </html>
   );
 }
