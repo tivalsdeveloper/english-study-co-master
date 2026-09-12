@@ -35,6 +35,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
         {children}
         <AccountTools />
         <Script src="/teacher-ai-lessons.js" strategy="afterInteractive" />
+        <Script src="/chat-enhancements.js" strategy="afterInteractive" />
       </body>
     </html>
   );
