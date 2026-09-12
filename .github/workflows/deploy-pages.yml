@@ -34,7 +34,7 @@ jobs:
         run: pnpm install --no-frozen-lockfile
 
       - name: Build static website
-        run: pnpm run build
+        run: pnpm exec vinext build
 
       - name: Upload website
         uses: actions/upload-pages-artifact@v3
