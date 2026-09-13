@@ -1,0 +1,8 @@
+(() => {
+  const SUPABASE="https://kxuszpixwfecawdeqkrx.supabase.co";
+  const KEY="sb_publishable__auyhjNpepXiYdGV5HEJ_A_AGsPbBuS";
+  function auth(){for(const k of Object.keys(localStorage)){if(!k.startsWith("sb-")||!k.endsWith("-auth-token"))continue;try{const x=JSON.parse(localStorage.getItem(k)||"{}"),s=x?.access_token?x:x?.currentSession;if(s?.user)return s}catch{}}return null}
+  async function removeMessage(userId,body,token){await fetch(`${SUPABASE}/rest/v1/english_messages?user_id=eq.${userId}&body=eq.${encodeURIComponent(body)}`,{method:"DELETE",headers:{apikey:KEY,Authorization:`Bearer ${token}`}})}
+  function bind(){const chat=document.querySelector("aside.chat.room");if(!chat)return;const form=chat.querySelector(":scope > form");const select=chat.querySelector(".chat-retention");if(!form||!select||form.dataset.deleteRestored)return;form.dataset.deleteRestored="1";form.addEventListener("submit",()=>{const s=auth();if(!s)return;const value=select.value;if(value==="never")return;const input=form.querySelector("input");const body=input?.value?.trim();if(!body)return;const delays={"1h":3600000,"24h":86400000,"7d":604800000,"30d":2592000000};const delay=delays[value];if(!delay)return;setTimeout(()=>removeMessage(s.user.id,body,s.access_token).catch(()=>{}),Math.min(delay,2147483647))},true)}
+  new MutationObserver(bind).observe(document.body,{childList:true,subtree:true});bind();
+})();
