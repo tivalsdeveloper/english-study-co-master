@@ -1,7 +1,7 @@
 "use client";
 import { FormEvent, useEffect, useState } from "react";
 import { createClient, type Session } from "@supabase/supabase-js";
-import { KeyRound, LogOut, UserRound, X } from "lucide-react";
+import { KeyRound, LogOut, X } from "lucide-react";
 
 const db = createClient(
   "https://kxuszpixwfecawdeqkrx.supabase.co",
@@ -31,8 +31,13 @@ export default function AccountTools() {
 
   useEffect(() => {
     const openFromLogin = () => openReset();
+    const openProfile = () => setProfileOpen(true);
     window.addEventListener("english-open-forgot-password", openFromLogin);
-    return () => window.removeEventListener("english-open-forgot-password", openFromLogin);
+    window.addEventListener("english-open-profile", openProfile);
+    return () => {
+      window.removeEventListener("english-open-forgot-password", openFromLogin);
+      window.removeEventListener("english-open-profile", openProfile);
+    };
   }, []);
 
   useEffect(() => {
@@ -92,11 +97,7 @@ export default function AccountTools() {
 
   const initial = (profile?.full_name || profile?.username || session?.user.email || "U").trim()[0]?.toUpperCase() || "U";
   return <>
-    {session ? (
-      <button className="account-fab" onClick={() => setProfileOpen(true)} aria-label="Open my profile">
-        <span>{initial}</span><UserRound /><b>Profile</b>
-      </button>
-    ) : (
+    {!session && (
       <button className="forgot-fab" onClick={openReset}><KeyRound /> Forgot password?</button>
     )}
 
