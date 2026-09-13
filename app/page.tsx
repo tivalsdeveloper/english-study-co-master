@@ -21,6 +21,7 @@ import {
   Smartphone,
   Sparkles,
   Trash2,
+  UserRound,
   Users,
   Volume2,
   X,
@@ -358,6 +359,15 @@ export default function Home() {
           {s ? (
             <>
               <span>Hi, {p?.full_name?.split(" ")[0] || "learner"}</span>
+              <button
+                className="plain nav-profile"
+                aria-label="Open my profile"
+                onClick={() =>
+                  window.dispatchEvent(new Event("english-open-profile"))
+                }
+              >
+                <UserRound />
+              </button>
               <button className="plain" onClick={() => db.auth.signOut()}>
                 <LogOut />
               </button>
@@ -1735,6 +1745,43 @@ function Chat({
     setItems((a) => [data as GroupLesson, ...a]);
     setPosting(false);
   }
+  async function generateLesson(form: HTMLFormElement) {
+    const titleInput = form.querySelector('[name="title"]') as HTMLInputElement | null,
+      levelSelect = form.querySelector('[name="level"]') as unknown as HTMLSelectElement | null,
+      contentInput = form.querySelector('[name="content"]') as HTMLTextAreaElement | null;
+    if (!titleInput || !levelSelect || !contentInput) return;
+    const topic = window.prompt(
+      "What topic should the lesson teach?",
+      titleInput.value || "Verbs",
+    );
+    if (!topic) return;
+    setAiBusy(true);
+    setError("");
+    try {
+      const level = levelSelect.value;
+      const data = await callAI<{ reply?: string; error?: string }>({
+        task: "create-lesson",
+        messages: [
+          {
+            role: "user",
+            content: `Create a complete English lesson about ${topic} for ${level}.`,
+          },
+        ],
+      });
+      if (!data.reply)
+        throw new Error(data.error || "AI could not create the lesson.");
+      titleInput.value = topic;
+      contentInput.value = data.reply;
+    } catch (problem) {
+      setError(
+        problem instanceof Error
+          ? problem.message
+          : "AI could not create the lesson.",
+      );
+    } finally {
+      setAiBusy(false);
+    }
+  }
   async function createAssignment(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     if (!group || !s) return;
@@ -1902,8 +1949,7 @@ function Chat({
       ),
     );
   }
-  const canPost =
-    profile?.role === "teacher" && group?.teacher_id === s?.user.id;
+  const canPost = !!s && group?.teacher_id === s.user.id;
   return (
     <aside className="chat room">
       <header>
@@ -2063,6 +2109,14 @@ function Chat({
         <div className="lesson-editor">
           <form onSubmit={publish}>
             <h3>Post a new lesson</h3>
+            <button
+              className="ai-assist"
+              type="button"
+              disabled={aiBusy}
+              onClick={(e) => generateLesson(e.currentTarget.form!)}
+            >
+              <Sparkles /> {aiBusy ? "Creating lesson…" : "Create lesson with AI"}
+            </button>
             <label>
               Lesson title
               <input
