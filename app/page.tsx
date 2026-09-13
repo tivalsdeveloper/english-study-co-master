@@ -1328,31 +1328,26 @@ function Dictionary({
       .then((r) => setSaved((r.data as SavedWord[]) || []));
   }, [session]);
   async function findWord(word: string) {
-    if (!word.trim()) return;
+    const cleanWord = word.trim();
+    if (!cleanWord) return;
+    if (!session) {
+      setError("Sign in to use the AI dictionary.");
+      return;
+    }
     setBusy(true);
     setError("");
     setEntries([]);
     try {
-      const response = await fetch(
-        "/.netlify/functions/dictionary?word=" +
-          encodeURIComponent(word.trim()),
-      );
-      const type = response.headers.get("content-type") || "";
-      if (!type.includes("application/json"))
+      const payload = await callAI<{ entry?: DictEntry; error?: string }>({
+        task: "dictionary",
+        word: cleanWord,
+      });
+      if (!payload.entry)
         throw new Error(
-          "The dictionary service is not responding correctly. Please try again.",
+          payload.error ||
+            "We could not explain that word. Check the spelling and try again.",
         );
-      const payload = (await response.json()) as
-        | DictEntry[]
-        | { error?: string };
-      if (!response.ok)
-        throw new Error(
-          (!Array.isArray(payload) && payload.error) ||
-            "We could not find that word. Check the spelling and try again.",
-        );
-      if (!Array.isArray(payload))
-        throw new Error("The dictionary returned an unexpected response.");
-      setEntries(payload);
+      setEntries([payload.entry]);
     } catch (problem) {
       setError(
         problem instanceof Error
@@ -1455,7 +1450,9 @@ function Dictionary({
                 <Search />
               </button>
             </form>
-            {busy && <p className="dict-status">Looking up “{query}”…</p>}
+            {busy && (
+              <p className="dict-status">AI is explaining “{query}”…</p>
+            )}
             {error && <div className="error">{error}</div>}
             {entry && (
               <article className="word-result">
@@ -1518,8 +1515,8 @@ function Dictionary({
                 <BookOpen />
                 <h2>Discover a new word</h2>
                 <p>
-                  Search for definitions, examples, pronunciation, synonyms and
-                  antonyms.
+                  Search with AI for simple definitions, examples,
+                  pronunciation, synonyms and antonyms.
                 </p>
               </div>
             )}
