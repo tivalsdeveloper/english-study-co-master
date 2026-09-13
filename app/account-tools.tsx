@@ -38,8 +38,25 @@ export default function AccountTools() {
   useEffect(() => {
     if (!session) { setProfile(null); return; }
     setEmail(session.user.email || "");
-    db.from("english_profiles").select("full_name,username,role").eq("id", session.user.id).maybeSingle()
-      .then(({ data }) => setProfile(data));
+    void (async () => {
+      const [{ data: profileData }, { data: ownedGroups }] = await Promise.all([
+        db.from("english_profiles").select("full_name,username,role").eq("id", session.user.id).maybeSingle(),
+        db.from("english_groups").select("id").eq("teacher_id", session.user.id).limit(1),
+      ]);
+      let next = profileData as Profile | null;
+      if (ownedGroups?.length && next?.role !== "teacher") {
+        const { data: repaired } = await db
+          .from("english_profiles")
+          .update({ role: "teacher" })
+          .eq("id", session.user.id)
+          .select("full_name,username,role")
+          .maybeSingle();
+        next = (repaired as Profile | null) || { ...(next || {}), role: "teacher" };
+        window.location.reload();
+        return;
+      }
+      setProfile(next);
+    })();
   }, [session]);
 
   function openReset() {
