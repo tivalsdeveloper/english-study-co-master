@@ -1,13 +1,14 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
+declare const Deno: any;
 const cors={"Access-Control-Allow-Origin":"*","Access-Control-Allow-Headers":"authorization, x-client-info, apikey, content-type","Access-Control-Allow-Methods":"POST,OPTIONS","Content-Type":"application/json"};
 const fallback=[{id:"free/gemini-3.1-pro",name:"Gemini 3.1 Pro"}];
-async function freeModels(key:string){try{const r=await fetch("https://api.apinex.bond/v1/models",{headers:{Authorization:`Bearer ${key}`}});if(!r.ok)return fallback;const p=await r.json();const list=(p.data||[]).filter((x:any)=>x.id?.startsWith("free/")).map((x:any)=>({id:x.id,name:x.name||x.id.replace("free/","")}));return list.length?list:fallback}catch{return fallback}}
-Deno.serve(async(req)=>{
+async function freeModels(key:string){try{const r=await fetch("https://api.apinex.bond/v1/models",{headers:{Authorization:`Bearer ${key}`}});if(!r.ok)return fallback;const p:any=await r.json();const list=(p.data||[]).filter((x:any)=>x.id?.startsWith("free/")).map((x:any)=>({id:x.id,name:x.name||x.id.replace("free/","")}));return list.length?list:fallback}catch{return fallback}}
+Deno.serve(async(req: Request)=>{
  if(req.method==="OPTIONS")return new Response(null,{status:204,headers:cors});
- const key=Deno.env.get("APINEX_API_KEY");
- if(!key)return new Response(JSON.stringify({error:"AI Tutor is not configured in Supabase yet."}),{status:503,headers:cors});
+ const key=Deno.env.get("APINEX_API_KEY"),openRouterKey=Deno.env.get("OPENROUTER_API_KEY");
+ if(!key&&!openRouterKey)return new Response(JSON.stringify({error:"AI Tutor is not configured in Supabase yet."}),{status:503,headers:cors});
  try{
-  const body=await req.json(),available=await freeModels(key);
+  const body:any=await req.json(),available=[...(key?await freeModels(key):[]),...(openRouterKey?[{id:"openrouter/free",name:"OpenRouter Free Models"}]:[])];
   if(body.action==="models")return new Response(JSON.stringify({models:available}),{headers:cors});
   const allowed=new Set(available.map(x=>x.id)),model=body.model&&allowed.has(body.model)?body.model:available[0].id;
   const messages=(body.messages||[]).slice(-12).filter((x:any)=>x&&(x.role==="user"||x.role==="assistant")&&typeof x.content==="string").map((x:any)=>({...x,content:x.content.slice(0,12000)}));
@@ -16,8 +17,9 @@ Deno.serve(async(req)=>{
   if(body.task==="grade-assignment")system="Assist a teacher with marking. Return exactly: SUGGESTED SCORE: [number]; FEEDBACK: [constructive feedback]. Never exceed the maximum mark. The teacher makes the final decision.";
   if(body.context)messages.unshift({role:"user",content:String(body.context).slice(0,16000)});
   if(!messages.length)return new Response(JSON.stringify({error:"Please enter a request."}),{status:400,headers:cors});
-  const upstream=await fetch("https://api.apinex.bond/v1/chat/completions",{method:"POST",headers:{Authorization:`Bearer ${key}`,"Content-Type":"application/json"},body:JSON.stringify({model,messages:[{role:"system",content:system},...messages],temperature:.4,max_tokens:1200})});
-  const payload=await upstream.json();if(!upstream.ok)throw new Error(payload.error?.message||"The selected model is unavailable.");
+  const useOpenRouter=model==="openrouter/free";
+  const upstream=await fetch(useOpenRouter?"https://openrouter.ai/api/v1/chat/completions":"https://api.apinex.bond/v1/chat/completions",{method:"POST",headers:{Authorization:`Bearer ${useOpenRouter?openRouterKey:key}`,"Content-Type":"application/json",...(useOpenRouter?{"HTTP-Referer":"https://english.tivalsdeveloper.site","X-Title":"English Study Co.Master"}:{})},body:JSON.stringify({model,messages:[{role:"system",content:system},...messages],temperature:.4,max_tokens:1200})});
+  const payload:any=await upstream.json();if(!upstream.ok)throw new Error(payload.error?.message||"The selected model is unavailable.");
   const reply=payload.choices?.[0]?.message?.content?.trim();if(!reply)throw new Error("The AI returned an empty response.");
   return new Response(JSON.stringify({reply,model}),{headers:cors});
  }catch(error){return new Response(JSON.stringify({error:error instanceof Error?error.message:"The AI could not process that request."}),{status:500,headers:cors})}

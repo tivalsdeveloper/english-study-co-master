@@ -1134,6 +1134,18 @@ function Auth({
     else setWait(60);
     setBusy(false);
   }
+  async function signInWithGoogle() {
+    setBusy(true);
+    setError("");
+    const { error } = await db.auth.signInWithOAuth({
+      provider: "google",
+      options: { redirectTo: "https://english.tivalsdeveloper.site" },
+    });
+    if (error) {
+      setError(error.message);
+      setBusy(false);
+    }
+  }
   return (
     <div className="shade">
       <section className="auth">
@@ -1202,6 +1214,35 @@ function Auth({
                 ? "Join students and teachers learning together."
                 : "Continue your English journey."}
             </p>
+            <button
+              type="button"
+              className="google-signin"
+              disabled={busy}
+              onClick={signInWithGoogle}
+            >
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path
+                  fill="#4285F4"
+                  d="M21.6 12.2c0-.7-.1-1.4-.2-2H12v3.9h5.4a4.6 4.6 0 0 1-2 3v2.5h3.2c1.9-1.7 3-4.3 3-7.4Z"
+                />
+                <path
+                  fill="#34A853"
+                  d="M12 22c2.7 0 5-.9 6.6-2.4l-3.2-2.5c-.9.6-2 1-3.4 1a5.8 5.8 0 0 1-5.5-4H3.2v2.6A10 10 0 0 0 12 22Z"
+                />
+                <path
+                  fill="#FBBC05"
+                  d="M6.5 14.1a6 6 0 0 1 0-3.9V7.6H3.2a10 10 0 0 0 0 9.1l3.3-2.6Z"
+                />
+                <path
+                  fill="#EA4335"
+                  d="M12 6a5.4 5.4 0 0 1 3.8 1.5l2.9-2.8A9.7 9.7 0 0 0 12 2a10 10 0 0 0-8.8 5.6l3.3 2.6A5.8 5.8 0 0 1 12 6Z"
+                />
+              </svg>
+              Continue with Google
+            </button>
+            <div className="auth-divider">
+              <span>or use email</span>
+            </div>
             <form onSubmit={submit}>
               {signup && (
                 <>
