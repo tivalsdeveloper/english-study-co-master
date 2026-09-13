@@ -1139,7 +1139,7 @@ function Auth({
     setError("");
     const { error } = await db.auth.signInWithOAuth({
       provider: "google",
-      options: { redirectTo: "https://english.tivalsdeveloper.site" },
+      options: { redirectTo: `${window.location.origin}/` },
     });
     if (error) {
       setError(error.message);
