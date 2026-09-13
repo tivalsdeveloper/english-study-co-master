@@ -10,3 +10,4 @@ html,body{overflow-x:hidden}img,iframe{max-width:100%}button,.primary{min-height
  footer .wrap{gap:10px}footer i{line-height:1.5}
 }
 @media(max-width:360px){.brand span{display:none}.actions>.primary{font-size:11px}.hero h1{font-size:40px}.visual aside{display:none}.panel>header b{font-size:13px}}
+.skip-link{position:fixed;top:8px;left:8px;z-index:1000;transform:translateY(-150%);padding:11px 14px;border-radius:9px;background:#fff;color:var(--g);font-weight:800;box-shadow:0 6px 24px #0003}.skip-link:focus{transform:translateY(0)}:focus-visible{outline:3px solid #f1a14b;outline-offset:3px}button:disabled{cursor:not-allowed;opacity:.6}@media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}*,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}}

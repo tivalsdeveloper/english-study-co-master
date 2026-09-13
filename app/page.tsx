@@ -29,6 +29,13 @@ const db = createClient(
   "https://kxuszpixwfecawdeqkrx.supabase.co",
   "sb_publishable__auyhjNpepXiYdGV5HEJ_A_AGsPbBuS",
 );
+async function callAI<T>(body: Record<string, unknown>): Promise<T> {
+  const { data, error } = await db.functions.invoke("ai-tutor", { body });
+  if (error)
+    throw new Error(error.message || "The AI service could not be reached.");
+  if (data?.error) throw new Error(data.error);
+  return data as T;
+}
 type Profile = {
   id: string;
   full_name: string;
@@ -325,7 +332,7 @@ export default function Home() {
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
   return (
-    <main data-mobile-view={mobileView}>
+    <main id="main-content" data-mobile-view={mobileView}>
       <nav className="nav wrap">
         <a className="brand" href="#" onClick={() => showMobile("lessons")}>
           <b>E</b>
@@ -773,8 +780,9 @@ function AiTutor({ close }: { close: () => void }) {
     ]),
     [model, setModel] = useState("free/gemini-3.1-pro");
   useEffect(() => {
-    void fetch("https://english-study-co-master.netlify.app/.netlify/functions/ai-tutor")
-      .then((r) => r.json() as Promise<{ models?: { id: string; name: string }[] }>)
+    void callAI<{ models?: { id: string; name: string }[] }>({
+      action: "models",
+    })
       .then((x) => {
         if (x.models?.length) {
           setModels(x.models);
@@ -796,17 +804,10 @@ function AiTutor({ close }: { close: () => void }) {
     setBusy(true);
     setError("");
     try {
-      const response = await fetch("https://english-study-co-master.netlify.app/.netlify/functions/ai-tutor", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ messages: next.slice(-10), model }),
-      });
-      const data = (await response.json()) as {
+      const data = await callAI<{
         error?: string;
         reply?: string;
-      };
-      if (!response.ok)
-        throw new Error(data.error || "The tutor could not answer.");
+      }>({ messages: next.slice(-10), model });
       if (!data.reply) throw new Error("The tutor returned an empty response.");
       setMessages([...next, { role: "assistant", content: data.reply }]);
     } catch (err) {
@@ -838,7 +839,11 @@ function AiTutor({ close }: { close: () => void }) {
         <label className="ai-model">
           AI model
           <select value={model} onChange={(e) => setModel(e.target.value)}>
-            {models.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}
+            {models.map((item) => (
+              <option key={item.id} value={item.id}>
+                {item.name}
+              </option>
+            ))}
           </select>
         </label>
         <div className="ai-messages">
@@ -849,7 +854,7 @@ function AiTutor({ close }: { close: () => void }) {
             </article>
           ))}
           {busy && (
-            <article className="assistant ai-thinking">
+            <article className="assistant ai-thinking" aria-live="polite">
               <b>AI Tutor</b>
               <p>
                 <i />
@@ -858,7 +863,11 @@ function AiTutor({ close }: { close: () => void }) {
               </p>
             </article>
           )}
-          {error && <div className="ai-error">{error}</div>}
+          {error && (
+            <div className="ai-error" role="alert">
+              {error}
+            </div>
+          )}
         </div>
         {messages.length === 1 && (
           <div className="ai-suggestions">
@@ -1714,23 +1723,40 @@ function Chat({
     setPostingAssignment(false);
   }
   async function generateAssignment(form: HTMLFormElement) {
-    const topic = window.prompt("What topic should the assignment cover?", "Verbs");
+    const topic = window.prompt(
+      "What topic should the assignment cover?",
+      "Verbs",
+    );
     if (!topic) return;
     setAiBusy(true);
     setError("");
     try {
-      const points = (form.elements.namedItem("points") as HTMLInputElement).value;
-      const response = await fetch("https://english-study-co-master.netlify.app/.netlify/functions/ai-tutor", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ task: "create-assignment", messages: [{ role: "user", content: `Create an assignment about ${topic} for ${group?.level || "English learners"}, worth ${points} marks.` }] }),
+      const points = (form.elements.namedItem("points") as HTMLInputElement)
+        .value;
+      const data = await callAI<{ reply?: string; error?: string }>({
+        task: "create-assignment",
+        messages: [
+          {
+            role: "user",
+            content: `Create an assignment about ${topic} for ${group?.level || "English learners"}, worth ${points} marks.`,
+          },
+        ],
       });
-      const data = await response.json() as { reply?: string; error?: string };
-      if (!response.ok || !data.reply) throw new Error(data.error || "AI could not create the assignment.");
-      (form.elements.namedItem("title") as HTMLInputElement).value = topic + " assignment";
-      (form.elements.namedItem("instructions") as HTMLTextAreaElement).value = data.reply;
-    } catch (problem) { setError(problem instanceof Error ? problem.message : "AI could not create the assignment."); }
-    finally { setAiBusy(false); }
+      if (!data.reply)
+        throw new Error(data.error || "AI could not create the assignment.");
+      (form.elements.namedItem("title") as HTMLInputElement).value =
+        topic + " assignment";
+      (form.elements.namedItem("instructions") as HTMLTextAreaElement).value =
+        data.reply;
+    } catch (problem) {
+      setError(
+        problem instanceof Error
+          ? problem.message
+          : "AI could not create the assignment.",
+      );
+    } finally {
+      setAiBusy(false);
+    }
   }
   async function suggestGrade(form: HTMLFormElement, submission: Submission) {
     if (!selectedAssignment) return;
@@ -1738,15 +1764,36 @@ function Chat({
     setError("");
     try {
       const context = `Assignment: ${selectedAssignment.title}\nInstructions: ${selectedAssignment.instructions}\nMaximum: ${selectedAssignment.max_points}\nStudent answer: ${submission.answer}`;
-      const response = await fetch("https://english-study-co-master.netlify.app/.netlify/functions/ai-tutor", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ task: "grade-assignment", context, messages: [{ role: "user", content: "Suggest a fair score and helpful feedback." }] }) });
-      const data = await response.json() as { reply?: string; error?: string };
-      if (!response.ok || !data.reply) throw new Error(data.error || "AI could not mark this answer.");
+      const data = await callAI<{ reply?: string; error?: string }>({
+        task: "grade-assignment",
+        context,
+        messages: [
+          {
+            role: "user",
+            content: "Suggest a fair score and helpful feedback.",
+          },
+        ],
+      });
+      if (!data.reply)
+        throw new Error(data.error || "AI could not mark this answer.");
       const match = data.reply.match(/SUGGESTED SCORE:\s*(\d+(?:\.\d+)?)/i);
-      const feedback = data.reply.match(/FEEDBACK:\s*([\s\S]*)/i)?.[1]?.trim() || data.reply;
-      if (match) (form.elements.namedItem("score") as HTMLInputElement).value = String(Math.min(Number(match[1]), selectedAssignment.max_points));
-      (form.elements.namedItem("feedback") as HTMLTextAreaElement).value = feedback;
-    } catch (problem) { setError(problem instanceof Error ? problem.message : "AI could not mark this answer."); }
-    finally { setAiBusy(false); }
+      const feedback =
+        data.reply.match(/FEEDBACK:\s*([\s\S]*)/i)?.[1]?.trim() || data.reply;
+      if (match)
+        (form.elements.namedItem("score") as HTMLInputElement).value = String(
+          Math.min(Number(match[1]), selectedAssignment.max_points),
+        );
+      (form.elements.namedItem("feedback") as HTMLTextAreaElement).value =
+        feedback;
+    } catch (problem) {
+      setError(
+        problem instanceof Error
+          ? problem.message
+          : "AI could not mark this answer.",
+      );
+    } finally {
+      setAiBusy(false);
+    }
   }
   async function openAssignment(item: Assignment) {
     setSelectedAssignment(item);
@@ -2027,7 +2074,12 @@ function Chat({
         <div className="lesson-editor">
           <form onSubmit={createAssignment}>
             <h3>Create an assignment</h3>
-            <button className="ai-assist" type="button" disabled={aiBusy} onClick={(e) => generateAssignment(e.currentTarget.form!)}>
+            <button
+              className="ai-assist"
+              type="button"
+              disabled={aiBusy}
+              onClick={(e) => generateAssignment(e.currentTarget.form!)}
+            >
               <Sparkles /> {aiBusy ? "Creating…" : "Create with AI"}
             </button>
             <label>
@@ -2106,8 +2158,16 @@ function Chat({
                       </small>
                       <p>{sub.answer}</p>
                       <form onSubmit={(e) => grade(e, sub)}>
-                        <button className="ai-assist" type="button" disabled={aiBusy} onClick={(e) => suggestGrade(e.currentTarget.form!, sub)}>
-                          <Sparkles /> {aiBusy ? "Checking…" : "AI suggest mark"}
+                        <button
+                          className="ai-assist"
+                          type="button"
+                          disabled={aiBusy}
+                          onClick={(e) =>
+                            suggestGrade(e.currentTarget.form!, sub)
+                          }
+                        >
+                          <Sparkles />{" "}
+                          {aiBusy ? "Checking…" : "AI suggest mark"}
                         </button>
                         <label>
                           Mark
