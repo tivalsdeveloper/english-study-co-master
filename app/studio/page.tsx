@@ -2,7 +2,6 @@
 import { FormEvent, useEffect, useState } from "react";
 import { createClient, type Session } from "@supabase/supabase-js";
 import { ArrowLeft, Download, Image as ImageIcon, LoaderCircle, Sparkles, Video } from "lucide-react";
-import "./studio.css";
 
 const db=createClient("https://kxuszpixwfecawdeqkrx.supabase.co","sb_publishable__auyhjNpepXiYdGV5HEJ_A_AGsPbBuS");
 type Kind="image"|"video";
