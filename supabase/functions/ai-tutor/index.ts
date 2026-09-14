@@ -30,12 +30,12 @@ Deno.serve(async(req: Request)=>{
   for(const candidate of candidates){
    try{
     const useOpenRouter=candidate==="openrouter/free";
-    const upstream=await fetch(useOpenRouter?"https://openrouter.ai/api/v1/chat/completions":"https://api.apinex.bond/v1/chat/completions",{method:"POST",signal:AbortSignal.timeout(25000),headers:{Authorization:`Bearer ${useOpenRouter?openRouterKey:key}`,"Content-Type":"application/json",...(useOpenRouter?{"HTTP-Referer":"https://english.tivalsdeveloper.site","X-Title":"English Study Co.Master"}:{})},body:JSON.stringify({model:candidate,messages:[{role:"system",content:system},...messages],temperature:.4,max_tokens:1200})});
+    const upstream=await fetch(useOpenRouter?"https://openrouter.ai/api/v1/chat/completions":"https://api.apinex.bond/v1/chat/completions",{method:"POST",signal:AbortSignal.timeout(25000),headers:{Authorization:`Bearer ${useOpenRouter?openRouterKey:key}`,"Content-Type":"application/json",...(useOpenRouter?{"HTTP-Referer":"https://english.tivalsdeveloper.site","X-Title":"English Study Co.Master"}:{})},body:JSON.stringify({model:candidate,messages:[{role:"system",content:system},...messages],temperature:.4,max_tokens:1200,...(body.task==="dictionary"?{response_format:{type:"json_object"}}:{})})});
     const raw=await upstream.text();let payload:any={};try{payload=JSON.parse(raw)}catch{throw new Error("invalid service response")}
     if(!upstream.ok)throw new Error(payload.error?.message||`HTTP ${upstream.status}`);
     const reply=payload.choices?.[0]?.message?.content?.trim();if(!reply)throw new Error("empty response");
     if(body.task==="dictionary"){
-     const cleaned=reply.replace(/^```(?:json)?\s*/i,"").replace(/\s*```$/,"").trim(),entry=JSON.parse(cleaned);
+     const cleaned=reply.replace(/^```(?:json)?\s*/i,"").replace(/\s*```$/,"").trim(),jsonStart=cleaned.indexOf("{"),jsonEnd=cleaned.lastIndexOf("}"),entry=JSON.parse(jsonStart>=0&&jsonEnd>jsonStart?cleaned.slice(jsonStart,jsonEnd+1):cleaned);
      if(!entry?.word||!Array.isArray(entry.meanings)||!entry.meanings.length)throw new Error("invalid dictionary response");
      return new Response(JSON.stringify({entry,model:candidate,fallbackUsed:candidate!==model}),{headers:cors});
     }
