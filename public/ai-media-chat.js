@@ -1,156 +1,50 @@
 (() => {
   const SUPABASE_URL = "https://kxuszpixwfecawdeqkrx.supabase.co";
   const ANON_KEY = "sb_publishable__auyhjNpepXiYdGV5HEJ_A_AGsPbBuS";
-  const STORE = "english-ai-media-history";
-  let mode = null;
-  let busy = false;
+  const MEDIA_STORE = "english-ai-media-history";
+  const CHAT_STORE = "english-ai-chat-sessions-v2";
+  let mode = null, busy = false, activeChat = null;
 
   const css = document.createElement("style");
   css.textContent = `
-    .ai-media-tools{display:flex;gap:8px;padding:8px 12px 2px;flex-wrap:wrap}
-    .ai-media-tools button{border:1px solid #d9dee8;background:#fff;border-radius:999px;padding:8px 12px;font:inherit;display:flex;align-items:center;gap:6px;cursor:pointer}
-    .ai-media-tools button.active{background:#111827;color:#fff;border-color:#111827}
-    .ai-media-tools button:disabled{opacity:.55;cursor:not-allowed}
-    .ai-media-card{margin-top:8px;overflow:hidden;border-radius:14px;border:1px solid #e5e7eb;background:#fff}
-    .ai-media-card img,.ai-media-card video{display:block;width:100%;max-height:430px;object-fit:contain;background:#0b1020}
-    .ai-media-card footer{display:flex;gap:8px;padding:10px;align-items:center;flex-wrap:wrap}
-    .ai-media-card a,.ai-media-card button{border:1px solid #d9dee8;background:#fff;border-radius:9px;padding:7px 10px;text-decoration:none;color:inherit;font:inherit;cursor:pointer}
-    .ai-media-label{font-size:12px;opacity:.7;margin-right:auto}
-  `;
+  .ai-media-tools{display:flex;gap:8px;padding:8px 12px 2px;flex-wrap:wrap}.ai-media-tools button,.ai-history-btn{border:1px solid #d9dee8;background:#fff;border-radius:999px;padding:8px 12px;font:inherit;display:flex;align-items:center;gap:6px;cursor:pointer}.ai-media-tools button.active{background:#111827;color:#fff;border-color:#111827}.ai-media-tools button:disabled{opacity:.55}.ai-media-card{margin-top:8px;overflow:hidden;border-radius:14px;border:1px solid #e5e7eb;background:#fff}.ai-media-card img,.ai-media-card video{display:block;width:100%;max-height:430px;object-fit:contain;background:#0b1020}.ai-media-card footer{display:flex;gap:8px;padding:10px;align-items:center;flex-wrap:wrap}.ai-media-card a,.ai-media-card button{border:1px solid #d9dee8;background:#fff;border-radius:9px;padding:7px 10px;text-decoration:none;color:inherit;font:inherit;cursor:pointer}.ai-media-label{font-size:12px;opacity:.7;margin-right:auto}
+  .ai-history-panel{position:absolute;inset:0 auto 0 0;width:min(86vw,330px);z-index:40;background:#fff;border-right:1px solid #e5e7eb;box-shadow:8px 0 30px #0002;display:flex;flex-direction:column}.ai-history-panel[hidden]{display:none}.ai-history-head{display:flex;align-items:center;justify-content:space-between;padding:15px;border-bottom:1px solid #eee}.ai-history-head button,.ai-history-new,.ai-history-item{border:0;background:none;font:inherit;cursor:pointer}.ai-history-new{margin:12px;padding:11px;border:1px solid #ddd;border-radius:10px;text-align:left}.ai-history-list{overflow:auto;padding:4px 8px 14px}.ai-history-item{display:block;width:100%;text-align:left;padding:11px;border-radius:9px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.ai-history-item:hover,.ai-history-item.active{background:#f3f4f6}.ai-history-section{padding:12px 12px 5px;font-size:12px;font-weight:700;color:#6b7280;text-transform:uppercase}.ai-device-media{display:grid;grid-template-columns:repeat(3,1fr);gap:5px;padding:7px 12px 15px}.ai-device-media img,.ai-device-media video{width:100%;height:76px;object-fit:cover;border-radius:7px;background:#111}.ai-tutor{position:relative}.ai-history-empty{padding:12px;color:#6b7280;font-size:13px}`;
   document.head.appendChild(css);
 
-  function history() {
-    try { return JSON.parse(localStorage.getItem(STORE) || "[]"); } catch { return []; }
+  const read = key => { try { return JSON.parse(localStorage.getItem(key) || "[]"); } catch { return []; } };
+  const write = (key, value) => localStorage.setItem(key, JSON.stringify(value));
+  const escapeHtml = s => { const d=document.createElement("div"); d.textContent=s; return d.innerHTML; };
+  const mediaHistory = () => read(MEDIA_STORE);
+  function saveMedia(item){ write(MEDIA_STORE,[...mediaHistory(),item].slice(-60)); }
+  function sessions(){ return read(CHAT_STORE); }
+  function saveSessions(v){ write(CHAT_STORE,v.slice(0,50)); }
+  function titleFor(messages){ const u=messages.find(x=>x.role==="user"); return (u?.content||"New chat").replace(/\s+/g," ").slice(0,45); }
+  function snapshot(){
+    if(!activeChat) activeChat=crypto.randomUUID();
+    let msgs=[]; try{msgs=JSON.parse(localStorage.getItem("english-ai-chat-history")||"[]");}catch{}
+    const list=sessions(); const existing=list.find(x=>x.id===activeChat);
+    const item={id:activeChat,title:titleFor(msgs),updatedAt:Date.now(),messages:msgs,media:mediaHistory().filter(x=>x.chatId===activeChat)};
+    saveSessions([item,...list.filter(x=>x.id!==activeChat)].sort((a,b)=>b.updatedAt-a.updatedAt));
+    renderHistory();
   }
-  function save(item) {
-    const items = [...history(), item].slice(-30);
-    localStorage.setItem(STORE, JSON.stringify(items));
+  function mediaUrls(value){const found=[];const visit=v=>{if(typeof v==="string"&&/^https?:\/\//i.test(v)&&/\.(png|jpe?g|webp|mp4|webm)(\?|$)/i.test(v))found.push(v);else if(Array.isArray(v))v.forEach(visit);else if(v&&typeof v==="object")Object.values(v).forEach(visit)};visit(value);return[...new Set(found)]}
+  async function invoke(type,prompt){const r=await fetch(`${SUPABASE_URL}/functions/v1/pixazo-studio`,{method:"POST",headers:{"Content-Type":"application/json",apikey:ANON_KEY,Authorization:`Bearer ${ANON_KEY}`},body:JSON.stringify({type,prompt})});let data;try{data=await r.json()}catch{data={}}if(!r.ok||data?.error)throw new Error(data?.error||`Generation failed (${r.status}).`);return data}
+  function addCard(messages,item,persist=false){if(!messages||messages.querySelector(`[data-media-id="${item.id}"]`))return;const article=document.createElement("article");article.className="assistant";article.dataset.mediaId=item.id;article.innerHTML=`<b>AI Tutor</b><div class="ai-message-content"><p>${item.type==="video"?"Generated video":"Generated image"}: ${escapeHtml(item.prompt)}</p><div class="ai-media-card"></div></div>`;const card=article.querySelector(".ai-media-card"),media=item.type==="video"?document.createElement("video"):document.createElement("img");media.src=item.url;if(item.type==="video"){media.controls=true;media.playsInline=true}else media.alt=item.prompt;const footer=document.createElement("footer");footer.innerHTML=`<span class="ai-media-label">${item.type==="video"?"Video":"Image"} saved on this device</span><a href="${item.url}" target="_blank" rel="noopener" download>Download</a><button type="button">Regenerate</button>`;footer.querySelector("button").onclick=()=>generate(item.type,item.prompt,messages);card.append(media,footer);messages.appendChild(article);messages.scrollTop=messages.scrollHeight;if(persist){saveMedia(item);snapshot()}}
+  async function generate(type,prompt,messages){if(busy)return;busy=true;setDisabled(true);const pending=document.createElement("article");pending.className="assistant ai-thinking ai-media-pending";pending.innerHTML=`<b>AI Tutor</b><p>Generating ${type}…</p>`;messages.appendChild(pending);try{const data=await invoke(type,prompt),urls=mediaUrls(data);if(!urls.length)throw new Error("Generation completed but no media URL was returned.");pending.remove();addCard(messages,{id:crypto.randomUUID(),chatId:activeChat,type,prompt,url:urls[0],createdAt:Date.now()},true)}catch(e){pending.innerHTML=`<b>AI Tutor</b><div class="ai-error">${escapeHtml(e?.message||"Generation failed.")}</div>`}finally{busy=false;setDisabled(false);mode=null;updateActive()}}
+  function setDisabled(v){document.querySelectorAll(".ai-media-tools button").forEach(b=>b.disabled=v)}function updateActive(){document.querySelectorAll(".ai-media-tools button").forEach(b=>b.classList.toggle("active",b.dataset.mode===mode))}
+  function detect(t){if(/^\s*(generate|create|make|draw)\s+(an?\s+)?(image|picture|photo|illustration)\b/i.test(t))return"image";if(/^\s*(generate|create|make)\s+(an?\s+)?(video|clip|animation)\b/i.test(t))return"video";return null}
+  function cleanPrompt(t,type){const rx=type==="image"?/^\s*(generate|create|make|draw)\s+(an?\s+)?(image|picture|photo|illustration)\s*(of|showing|about)?\s*/i:/^\s*(generate|create|make)\s+(an?\s+)?(video|clip|animation)\s*(of|showing|about)?\s*/i;return t.replace(rx,"").trim()||t.trim()}
+  function newDeviceChat(){snapshot();activeChat=crypto.randomUUID();localStorage.removeItem("english-ai-chat-history");location.reload()}
+  function openSession(id){snapshot();const s=sessions().find(x=>x.id===id);if(!s)return;activeChat=id;write("english-ai-chat-history",s.messages||[]);location.reload()}
+  function renderHistory(){const panel=document.querySelector(".ai-history-panel");if(!panel)return;const list=panel.querySelector(".ai-history-list");const ss=sessions();list.innerHTML=ss.length?ss.map(s=>`<button class="ai-history-item ${s.id===activeChat?"active":""}" data-id="${s.id}">${escapeHtml(s.title||"New chat")}</button>`).join(""):`<div class="ai-history-empty">No previous chats on this device.</div>`;list.querySelectorAll("button").forEach(b=>b.onclick=()=>openSession(b.dataset.id));const gallery=panel.querySelector(".ai-device-media"),mh=mediaHistory().slice(-12).reverse();gallery.innerHTML=mh.map(x=>x.type==="video"?`<video src="${x.url}" controls playsinline></video>`:`<img src="${x.url}" alt="${escapeHtml(x.prompt)}">`).join("")||`<div class="ai-history-empty">No generated media yet.</div>`}
+  function enhance(){const tutor=document.querySelector(".ai-tutor"),form=tutor?.querySelector("form.ai-compose"),messages=tutor?.querySelector(".ai-messages");if(!tutor||!form||!messages||form.dataset.mediaEnhanced)return;form.dataset.mediaEnhanced="1";
+    if(!activeChat){const ss=sessions();activeChat=ss[0]?.id||crypto.randomUUID()}
+    const header=tutor.querySelector("header");const hb=document.createElement("button");hb.type="button";hb.className="ai-history-btn";hb.textContent="☰ History";header?.insertBefore(hb,header.firstChild);
+    const panel=document.createElement("aside");panel.className="ai-history-panel";panel.hidden=true;panel.innerHTML=`<div class="ai-history-head"><b>Chat history</b><button type="button">✕</button></div><button class="ai-history-new" type="button">＋ New chat</button><div class="ai-history-list"></div><div class="ai-history-section">Images & videos on this device</div><div class="ai-device-media"></div>`;tutor.appendChild(panel);hb.onclick=()=>{snapshot();panel.hidden=!panel.hidden;renderHistory()};panel.querySelector(".ai-history-head button").onclick=()=>panel.hidden=true;panel.querySelector(".ai-history-new").onclick=newDeviceChat;
+    const tools=document.createElement("div");tools.className="ai-media-tools";tools.innerHTML=`<button type="button" data-mode="image">🖼️ Generate image</button><button type="button" data-mode="video">🎬 Generate video</button>`;form.parentNode.insertBefore(tools,form);tools.querySelectorAll("button").forEach(btn=>btn.onclick=()=>{mode=mode===btn.dataset.mode?null:btn.dataset.mode;updateActive();const input=form.querySelector("textarea[name=message]");if(input){input.placeholder=mode?`Describe the ${mode} you want…`:"Ask your English question…";input.focus()}});
+    mediaHistory().filter(x=>x.chatId===activeChat).forEach(item=>addCard(messages,item,false));
+    form.addEventListener("submit",e=>{const input=form.querySelector("textarea[name=message]"),text=input?.value?.trim(),type=mode||detect(text||"");setTimeout(snapshot,1200);if(!type||!text)return;e.preventDefault();e.stopImmediatePropagation();const user=document.createElement("article");user.className="user";user.innerHTML=`<b>You</b><div class="ai-message-content"><p>${escapeHtml(text)}</p></div>`;messages.appendChild(user);input.value="";generate(type,cleanPrompt(text,type),messages)},true);
+    const observer=new MutationObserver(()=>{clearTimeout(window.__aiSaveTimer);window.__aiSaveTimer=setTimeout(snapshot,500)});observer.observe(messages,{childList:true,subtree:true});renderHistory();
   }
-  function mediaUrls(value) {
-    const found = [];
-    const visit = v => {
-      if (typeof v === "string" && /^https?:\/\//i.test(v) && /\.(png|jpe?g|webp|mp4|webm)(\?|$)/i.test(v)) found.push(v);
-      else if (Array.isArray(v)) v.forEach(visit);
-      else if (v && typeof v === "object") Object.values(v).forEach(visit);
-    };
-    visit(value);
-    return [...new Set(found)];
-  }
-  async function invoke(type, prompt) {
-    const r = await fetch(`${SUPABASE_URL}/functions/v1/pixazo-studio`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        apikey: ANON_KEY,
-        Authorization: `Bearer ${ANON_KEY}`
-      },
-      body: JSON.stringify({ type, prompt })
-    });
-    let data;
-    try { data = await r.json(); } catch { data = {}; }
-    if (!r.ok || data?.error) throw new Error(data?.error || `Generation failed (${r.status}).`);
-    return data;
-  }
-  function addCard(messages, item, persist = false) {
-    if (!messages || messages.querySelector(`[data-media-id="${item.id}"]`)) return;
-    const article = document.createElement("article");
-    article.className = "assistant";
-    article.dataset.mediaId = item.id;
-    article.innerHTML = `<b>AI Tutor</b><div class="ai-message-content"><p>${item.type === "video" ? "Generated video" : "Generated image"}: ${escapeHtml(item.prompt)}</p><div class="ai-media-card"></div></div>`;
-    const card = article.querySelector(".ai-media-card");
-    const media = item.type === "video" ? document.createElement("video") : document.createElement("img");
-    media.src = item.url;
-    if (item.type === "video") { media.controls = true; media.playsInline = true; }
-    else media.alt = item.prompt;
-    const footer = document.createElement("footer");
-    footer.innerHTML = `<span class="ai-media-label">${item.type === "video" ? "Video" : "Image"} generated in chat</span><a href="${item.url}" target="_blank" rel="noopener" download>Download</a><button type="button">Regenerate</button>`;
-    footer.querySelector("button").onclick = () => generate(item.type, item.prompt, messages);
-    card.append(media, footer);
-    messages.appendChild(article);
-    messages.scrollTop = messages.scrollHeight;
-    if (persist) save(item);
-  }
-  function escapeHtml(s) {
-    const d = document.createElement("div"); d.textContent = s; return d.innerHTML;
-  }
-  async function generate(type, prompt, messages) {
-    if (busy) return;
-    busy = true;
-    setButtonsDisabled(true);
-    const pending = document.createElement("article");
-    pending.className = "assistant ai-thinking ai-media-pending";
-    pending.innerHTML = `<b>AI Tutor</b><p>Generating ${type}…</p>`;
-    messages.appendChild(pending);
-    messages.scrollTop = messages.scrollHeight;
-    try {
-      const data = await invoke(type, prompt);
-      const urls = mediaUrls(data);
-      if (!urls.length) throw new Error("Generation completed but no media URL was returned.");
-      pending.remove();
-      addCard(messages, { id: crypto.randomUUID(), type, prompt, url: urls[0] }, true);
-    } catch (e) {
-      pending.innerHTML = `<b>AI Tutor</b><div class="ai-error">${escapeHtml(e?.message || "Generation failed.")}</div>`;
-    } finally {
-      busy = false;
-      setButtonsDisabled(false);
-      mode = null;
-      updateActive();
-    }
-  }
-  function setButtonsDisabled(value) {
-    document.querySelectorAll(".ai-media-tools button").forEach(b => b.disabled = value);
-  }
-  function updateActive() {
-    document.querySelectorAll(".ai-media-tools button").forEach(b => b.classList.toggle("active", b.dataset.mode === mode));
-  }
-  function detect(text) {
-    if (/^\s*(generate|create|make|draw)\s+(an?\s+)?(image|picture|photo|illustration)\b/i.test(text)) return "image";
-    if (/^\s*(generate|create|make)\s+(an?\s+)?(video|clip|animation)\b/i.test(text)) return "video";
-    return null;
-  }
-  function cleanPrompt(text, type) {
-    const rx = type === "image"
-      ? /^\s*(generate|create|make|draw)\s+(an?\s+)?(image|picture|photo|illustration)\s*(of|showing|about)?\s*/i
-      : /^\s*(generate|create|make)\s+(an?\s+)?(video|clip|animation)\s*(of|showing|about)?\s*/i;
-    return text.replace(rx, "").trim() || text.trim();
-  }
-  function enhance() {
-    const tutor = document.querySelector(".ai-tutor");
-    const form = tutor?.querySelector("form.ai-compose");
-    const messages = tutor?.querySelector(".ai-messages");
-    if (!tutor || !form || !messages || form.dataset.mediaEnhanced) return;
-    form.dataset.mediaEnhanced = "1";
-
-    const tools = document.createElement("div");
-    tools.className = "ai-media-tools";
-    tools.innerHTML = `<button type="button" data-mode="image">🖼️ Generate image</button><button type="button" data-mode="video">🎬 Generate video</button>`;
-    form.parentNode.insertBefore(tools, form);
-    tools.querySelectorAll("button").forEach(btn => btn.onclick = () => {
-      mode = mode === btn.dataset.mode ? null : btn.dataset.mode;
-      updateActive();
-      const input = form.querySelector("textarea[name=message]");
-      if (input) { input.placeholder = mode ? `Describe the ${mode} you want…` : "Ask your English question…"; input.focus(); }
-    });
-
-    history().forEach(item => addCard(messages, item, false));
-
-    form.addEventListener("submit", e => {
-      const input = form.querySelector("textarea[name=message]");
-      const text = input?.value?.trim();
-      const type = mode || detect(text || "");
-      if (!type || !text) return;
-      e.preventDefault();
-      e.stopImmediatePropagation();
-      const user = document.createElement("article");
-      user.className = "user";
-      user.innerHTML = `<b>You</b><div class="ai-message-content"><p>${escapeHtml(text)}</p></div>`;
-      messages.appendChild(user);
-      input.value = "";
-      generate(type, cleanPrompt(text, type), messages);
-    }, true);
-  }
-
-  const observer = new MutationObserver(enhance);
-  observer.observe(document.documentElement, { childList: true, subtree: true });
-  enhance();
+  const observer=new MutationObserver(enhance);observer.observe(document.documentElement,{childList:true,subtree:true});enhance();
 })();
