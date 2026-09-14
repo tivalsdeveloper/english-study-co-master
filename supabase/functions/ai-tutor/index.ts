@@ -14,7 +14,7 @@ Deno.serve(async(req: Request)=>{
   let model=body.model&&allowed.has(body.model)?body.model:available[0].id;
   const messages=(body.messages||[]).slice(-12).filter((x:any)=>x&&(x.role==="user"||x.role==="assistant")&&typeof x.content==="string").map((x:any)=>({...x,content:x.content.slice(0,12000)}));
   let system="You are a friendly expert English tutor. Answer the learner's exact question first. Use clear headings for longer answers, short paragraphs, numbered steps when teaching a process, and bullet points for examples. Bold key terms with markdown. Give natural example sentences and explain corrections kindly. End with one short practice question when useful. Avoid filler, repetition, and very long paragraphs. Keep the answer accurate and easy to read on a phone.";
-  if(body.task==="create-assignment")system="Create a classroom English assignment. Return a clear title, numbered instructions and questions, then a concise marking guide. Match the requested topic, level and total marks. Plain text only.";
+  if(body.task==="create-assignment")system="Create a classroom English multiple-choice quiz with exactly 10 questions. Every question must use this plain-text format: 1. Question text, then four separate lines A. option, B. option, C. option, D. option. Include only one correct option per question. After all questions add a section named MARKING GUIDE with each question number and correct letter. Match the topic, level and total marks. Do not use markdown tables.";
   if(body.task==="create-lesson")system="Create a complete classroom English lesson for the requested topic and level. Include learning objectives, a clear explanation, useful examples, vocabulary where relevant, guided practice, an independent student activity, a quick knowledge check, homework, and short teacher notes. Format it clearly for reading on a phone. Plain text only.";
   if(body.task==="grade-assignment")system="Assist a teacher with marking. Return exactly: SUGGESTED SCORE: [number]; FEEDBACK: [constructive feedback]. Never exceed the maximum mark. The teacher makes the final decision.";
   if(body.task==="dictionary"){
@@ -25,7 +25,8 @@ Deno.serve(async(req: Request)=>{
   }
   if(body.context)messages.unshift({role:"user",content:String(body.context).slice(0,16000)});
   if(!messages.length)return new Response(JSON.stringify({error:"Please enter a request."}),{status:400,headers:cors});
-  const candidates=[model,...available.map(x=>x.id).filter(id=>id!==model)].slice(0,10),failures:string[]=[];
+  const otherApinex=available.map(x=>x.id).filter(id=>id!==model&&id!=="openrouter/free").slice(0,8);
+  const candidates=[...new Set([model,...otherApinex,...(openRouterKey?["openrouter/free"]:[])])],failures:string[]=[];
   for(const candidate of candidates){
    try{
     const useOpenRouter=candidate==="openrouter/free";
