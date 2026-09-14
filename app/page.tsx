@@ -1786,7 +1786,8 @@ function Chat({
     [submissions, setSubmissions] = useState<Submission[]>([]),
     [quizAnswers, setQuizAnswers] = useState<Record<number, string>>({}),
     [aiBusy, setAiBusy] = useState(false),
-    [error, setError] = useState("");
+    [error, setError] = useState(""),
+    [notice, setNotice] = useState("");
   useEffect(() => {
     if (!group) return;
     void Promise.all([
@@ -1805,6 +1806,20 @@ function Chat({
       setAssignments((assignmentResult.data as Assignment[]) || []);
     });
   }, [group]);
+  useEffect(() => {
+    if (!s || !selectedAssignment) return;
+    const channel = db.channel(`assignment-result-${selectedAssignment.id}-${s.user.id}`).on(
+      "postgres_changes",
+      { event: "UPDATE", schema: "public", table: "english_assignment_submissions", filter: `student_id=eq.${s.user.id}` },
+      (event) => {
+        const updated = event.new as Submission;
+        if (updated.assignment_id !== selectedAssignment.id) return;
+        setSubmissions((current) => current.map((item) => item.id === updated.id ? { ...item, ...updated } : item));
+        if (group?.teacher_id !== s.user.id) setNotice("Your teacher has sent your result and feedback.");
+      },
+    ).subscribe();
+    return () => { void db.removeChannel(channel); };
+  }, [s, selectedAssignment, group?.teacher_id]);
   async function send(e: FormEvent) {
     e.preventDefault();
     if (!group || !s || !body.trim()) return;
@@ -1900,9 +1915,10 @@ function Chat({
     setPostingAssignment(false);
   }
   async function generateAssignment(form: HTMLFormElement) {
+    const assignmentType = (form.elements.namedItem("assignment_type") as unknown as HTMLSelectElement)?.value || "General English quiz";
     const topic = window.prompt(
       "What topic should the assignment cover?",
-      "Verbs",
+      assignmentType.includes("Short story") ? "Short story comprehension and literary devices" : assignmentType.includes("Drama") ? "Drama, characters, stage directions and themes" : "Verbs",
     );
     if (!topic) return;
     setAiBusy(true);
@@ -1915,7 +1931,7 @@ function Chat({
         messages: [
           {
             role: "user",
-            content: `Create an assignment about ${topic} for ${group?.level || "English learners"}, worth ${points} marks.`,
+            content: `Create a ${assignmentType} assignment about ${topic} for ${group?.level || "English learners"}. It must contain 20 questions worth 5 marks each, totalling ${points} marks.`,
           },
         ],
       });
@@ -1976,6 +1992,7 @@ function Chat({
     setSelectedAssignment(item);
     setQuizAnswers({});
     setError("");
+    setNotice("");
     if (!s) return;
     const query = db
       .from("english_assignment_submissions")
@@ -2017,6 +2034,8 @@ function Chat({
   async function grade(e: FormEvent<HTMLFormElement>, submission: Submission) {
     e.preventDefault();
     if (!selectedAssignment) return;
+    setError("");
+    setNotice("");
     const f = new FormData(e.currentTarget),
       score = Number(f.get("score")),
       feedback = String(f.get("feedback"));
@@ -2043,6 +2062,7 @@ function Chat({
         x.id === submission.id ? (data as unknown as Submission) : x,
       ),
     );
+    setNotice("Mark saved successfully and sent to the student.");
   }
   const canPost = !!s && group?.teacher_id === s.user.id;
   return (
@@ -2273,6 +2293,15 @@ function Chat({
               <Sparkles /> {aiBusy ? "Creating…" : "Create with AI"}
             </button>
             <label>
+              Assignment type
+              <select name="assignment_type" defaultValue="General English quiz">
+                <option>General English quiz</option>
+                <option>Paper 2 · Short story</option>
+                <option>Paper 2 · Drama</option>
+                <option>Paper 2 · Short story and drama</option>
+              </select>
+            </label>
+            <label>
               Title
               <input
                 required
@@ -2336,6 +2365,7 @@ function Chat({
             </small>
             {!parseAssignmentQuiz(selectedAssignment.instructions).length && <p>{selectedAssignment.instructions}</p>}
             {error && <div className="error">{error}</div>}
+            {notice && <div className="success-notice"><CheckCircle />{notice}</div>}
             {canPost ? (
               <div className="submission-list">
                 <h3>Student submissions ({submissions.length})</h3>
