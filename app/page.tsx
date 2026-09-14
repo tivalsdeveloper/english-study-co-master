@@ -1,5 +1,5 @@
 "use client";
-import { FormEvent, useEffect, useState } from "react";
+import { FormEvent, useEffect, useRef, useState } from "react";
 import { createClient, type Session } from "@supabase/supabase-js";
 import {
   Award,
@@ -12,6 +12,7 @@ import {
   ChevronLeft,
   ChevronRight,
   ClipboardList,
+  Copy,
   Download,
   FileText,
   Headphones,
@@ -21,6 +22,7 @@ import {
   MessageCircle,
   Monitor,
   PenLine,
+  Plus,
   Search,
   Send,
   Smartphone,
@@ -790,20 +792,59 @@ export default function Home() {
   );
 }
 type AiMessage = { role: "user" | "assistant"; content: string };
+const AI_WELCOME: AiMessage = {
+  role: "assistant",
+  content: "Hello! I’m your AI English tutor. Ask me to explain grammar, correct a sentence, practise a conversation, or help with an assignment.",
+};
+function InlineText({ text }: { text: string }) {
+  return <>{text.split(/(\*\*[^*]+\*\*|\*[^*]+\*)/g).filter(Boolean).map((part, i) =>
+    part.startsWith("**") ? <strong key={i}>{part.slice(2, -2)}</strong> : part.startsWith("*") ? <em key={i}>{part.slice(1, -1)}</em> : <span key={i}>{part}</span>
+  )}</>;
+}
+function AnswerContent({ text }: { text: string }) {
+  const parts = text.split(/(```[\s\S]*?```)/g).filter(Boolean);
+  return <div className="ai-answer">{parts.map((part, index) => {
+    if (part.startsWith("```")) {
+      const match = part.match(/^```([^\n]*)\n?([\s\S]*?)```$/);
+      const code = (match?.[2] || part.slice(3, -3)).trim();
+      return <div className="ai-code" key={index}><div><span>{match?.[1] || "code"}</span><button type="button" onClick={() => navigator.clipboard.writeText(code)}><Copy /> Copy</button></div><pre><code>{code}</code></pre></div>;
+    }
+    return <div className="ai-prose" key={index}>{part.split("\n").map((line, i) => {
+      const clean = line.trim();
+      if (!clean) return <br key={i}/>;
+      if (/^#{1,3}\s/.test(clean)) return <h3 key={i}><InlineText text={clean.replace(/^#{1,3]\s*/, "")} /></h3>;
+      if (/^[-•*]\s/.test(clean)) return <div className="ai-bullet" key={i}><i>•</i><span><InlineText text={clean.replace(/^[-•*]\s*/, "")} /></span></div>;
+      if (/^\d+[.)]\s/.test(clean)) return <div className="ai-bullet numbered" key={i}><i>{clean.match(/^\d+/)?.[0]}</i><span><InlineText text={clean.replace(/^\d+[.)]\s*/, "")} /></span></div>;
+      return <p key={i}><InlineText text={clean} /></p>;
+    })}</div>;
+  })}</div>;
+}
 function AiTutor({ close }: { close: () => void }) {
-  const [messages, setMessages] = useState<AiMessage[]>([
-      {
-        role: "assistant",
-        content:
-          "Hello! I’m your AI English tutor. Ask me to explain grammar, correct a sentence, practise a conversation, or help with an assignment.",
-      },
-    ]),
+  const [messages, setMessages] = useState<AiMessage[]>([AI_WELCOME]),
     [busy, setBusy] = useState(false),
     [error, setError] = useState(""),
     [models, setModels] = useState<{ id: string; name: string }[]>([
       { id: "free/gemini-3.1-pro", name: "Gemini 3.1 Pro" },
     ]),
-    [model, setModel] = useState("free/gemini-3.1-pro");
+    [model, setModel] = useState("free/gemini-3.1-pro"),
+    [historyReady, setHistoryReady] = useState(false),
+    messageEnd = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    try {
+      const saved = JSON.parse(localStorage.getItem("english-ai-chat-history") || "null");
+      if (Array.isArray(saved) && saved.length) setMessages(saved.slice(-80));
+    } catch {}
+    setHistoryReady(true);
+  }, []);
+  useEffect(() => {
+    if (historyReady) localStorage.setItem("english-ai-chat-history", JSON.stringify(messages.slice(-80)));
+    messageEnd.current?.scrollIntoView({ behavior: "smooth", block: "end" });
+  }, [messages, busy, historyReady]);
+  function newChat() {
+    setMessages([AI_WELCOME]);
+    setError("");
+    localStorage.removeItem("english-ai-chat-history");
+  }
   useEffect(() => {
     void callAI<{ models?: { id: string; name: string }[] }>({
       action: "models",
@@ -859,6 +900,7 @@ function AiTutor({ close }: { close: () => void }) {
             <small>Learn · Practise · Improve · Succeed</small>
           </span>
           <i className="online-pill">● Online</i>
+          <button className="ai-new-chat" aria-label="Start a new chat" onClick={newChat}><Plus /></button>
           <button aria-label="Close AI tutor" onClick={close}>
             <X />
           </button>
@@ -877,7 +919,8 @@ function AiTutor({ close }: { close: () => void }) {
           {messages.map((m, i) => (
             <article className={m.role} key={i}>
               <b>{m.role === "assistant" ? "AI Tutor" : "You"}</b>
-              <p>{m.content}</p>
+              <div className="ai-message-content"><AnswerContent text={m.content} /></div>
+              <button className="ai-copy-native" type="button" onClick={() => navigator.clipboard.writeText(m.content)}><Copy /> Copy</button>
             </article>
           ))}
           {busy && (
@@ -895,6 +938,7 @@ function AiTutor({ close }: { close: () => void }) {
               {error}
             </div>
           )}
+          <div ref={messageEnd} />
         </div>
         {messages.length === 1 && (
           <div className="ai-suggestions">
@@ -925,6 +969,12 @@ function AiTutor({ close }: { close: () => void }) {
             rows={1}
             placeholder="Ask your English question…"
             aria-label="Message the AI English tutor"
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && !e.shiftKey) {
+                e.preventDefault();
+                e.currentTarget.form?.requestSubmit();
+              }
+            }}
           />
           <button disabled={busy} aria-label="Send message">
             <Send />
