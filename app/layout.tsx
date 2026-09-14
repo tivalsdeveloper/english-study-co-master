@@ -27,7 +27,6 @@ export default function RootLayout({
         </a>
         {children}
         <AccountTools />
-        <Script src="/chat-enhancements.js" strategy="afterInteractive" />
         <Script
           src="/restore-missing-features.js"
           strategy="afterInteractive"
