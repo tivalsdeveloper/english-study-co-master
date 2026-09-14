@@ -1,4 +1,3 @@
-# Builds the application instead of publishing README.md
 name: Deploy English Study Co.Master to GitHub Pages
 
 on:
@@ -33,13 +32,19 @@ jobs:
       - name: Install dependencies
         run: pnpm install --no-frozen-lockfile
 
-      - name: Build static website
-        run: pnpm exec vinext build
+      - name: Build original Next.js application
+        run: pnpm exec next build
+
+      - name: Preserve custom domain
+        run: cp CNAME out/CNAME
+
+      - name: Disable Jekyll processing
+        run: touch out/.nojekyll
 
       - name: Upload website
         uses: actions/upload-pages-artifact@v3
         with:
-          path: dist/client
+          path: out
 
   deploy:
     environment:
