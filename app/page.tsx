@@ -91,6 +91,21 @@ type Submission = {
   feedback: string;
   english_profiles?: { username: string } | null;
 };
+type QuizQuestion = { number: number; question: string; options: { letter: string; text: string }[] };
+function parseAssignmentQuiz(text: string): QuizQuestion[] {
+  const questions: QuizQuestion[] = [];
+  let current: QuizQuestion | null = null;
+  for (const raw of text.split("\n")) {
+    const line = raw.trim().replace(/^#+\s*/, "");
+    const question = line.match(/^(?:question\s*)?(\d+)[.):.-]\s*(.+)$/i);
+    const option = line.match(/^([A-D])[.):.-]\s*(.+)$/i);
+    if (question && !option) {
+      current = { number: Number(question[1]), question: question[2], options: [] };
+      questions.push(current);
+    } else if (option && current) current.options.push({ letter: option[1].toUpperCase(), text: option[2] });
+  }
+  return questions.filter((question) => question.options.length >= 2);
+}
 type DictEntry = {
   word: string;
   phonetic?: string;
@@ -1769,6 +1784,7 @@ function Chat({
       null,
     ),
     [submissions, setSubmissions] = useState<Submission[]>([]),
+    [quizAnswers, setQuizAnswers] = useState<Record<number, string>>({}),
     [aiBusy, setAiBusy] = useState(false),
     [error, setError] = useState("");
   useEffect(() => {
@@ -1958,6 +1974,7 @@ function Chat({
   }
   async function openAssignment(item: Assignment) {
     setSelectedAssignment(item);
+    setQuizAnswers({});
     setError("");
     if (!s) return;
     const query = db
@@ -1975,13 +1992,15 @@ function Chat({
     e.preventDefault();
     if (!selectedAssignment || !s) return;
     setError("");
-    const f = new FormData(e.currentTarget);
+    const f = new FormData(e.currentTarget),
+      quiz = parseAssignmentQuiz(selectedAssignment.instructions),
+      quizAnswer = quiz.length ? quiz.map((q, i) => `${q.number}. ${String(f.get(`q-${i}`) || "Not answered")}`).join("\n") : "";
     const { data, error: problem } = await db
       .from("english_assignment_submissions")
       .insert({
         assignment_id: selectedAssignment.id,
         student_id: s.user.id,
-        answer: String(f.get("answer")),
+        answer: quizAnswer || String(f.get("answer")),
       })
       .select("id,assignment_id,student_id,answer,submitted_at,score,feedback")
       .single();
@@ -2315,7 +2334,7 @@ function Chat({
                 ? "Due " + new Date(selectedAssignment.due_at).toLocaleString()
                 : "No deadline"}
             </small>
-            <p>{selectedAssignment.instructions}</p>
+            {!parseAssignmentQuiz(selectedAssignment.instructions).length && <p>{selectedAssignment.instructions}</p>}
             {error && <div className="error">{error}</div>}
             {canPost ? (
               <div className="submission-list">
@@ -2391,18 +2410,12 @@ function Chat({
               </div>
             ) : (
               <form className="answer-form" onSubmit={submitAnswer}>
-                <label>
-                  Your answer
-                  <textarea
-                    required
-                    name="answer"
-                    minLength={1}
-                    maxLength={12000}
-                    rows={10}
-                    placeholder="Type your complete answer here…"
-                  />
-                </label>
-                <button className="primary">Submit assignment</button>
+                {parseAssignmentQuiz(selectedAssignment.instructions).length ? <>
+                  <div className="quiz-progress"><span style={{width:`${Object.keys(quizAnswers).length / parseAssignmentQuiz(selectedAssignment.instructions).length * 100}%`}}/><b>{Object.keys(quizAnswers).length} of {parseAssignmentQuiz(selectedAssignment.instructions).length} answered</b></div>
+                  <div className="quiz-instructions"><ClipboardList /><span><b>Instructions</b><small>Read each question carefully. Choose A, B, C or D. Check your answers before submitting.</small></span><BookOpen /></div>
+                  <div className="quiz-questions">{parseAssignmentQuiz(selectedAssignment.instructions).map((question, i) => <fieldset key={i}><legend><i>{question.number}</i><b>{question.question}</b><em>{Math.round(selectedAssignment.max_points / parseAssignmentQuiz(selectedAssignment.instructions).length)} marks</em></legend><div>{question.options.map(option => <label className={quizAnswers[i] === option.letter ? "selected" : ""} key={option.letter}><input required type="radio" name={`q-${i}`} value={`${option.letter}. ${option.text}`} onChange={() => setQuizAnswers(a => ({...a,[i]:option.letter}))}/><strong>{option.letter}.</strong> {option.text}</label>)}</div><small>Your answer: {quizAnswers[i] || "Not selected"}</small></fieldset>)}</div>
+                </> : <label>Your answer<textarea required name="answer" minLength={1} maxLength={12000} rows={10} placeholder="Type your complete answer here…" /></label>}
+                <button className="primary" disabled={parseAssignmentQuiz(selectedAssignment.instructions).length > 0 && Object.keys(quizAnswers).length < parseAssignmentQuiz(selectedAssignment.instructions).length}>Submit assignment</button>
                 <small>
                   You can submit once. Check your answer carefully first.
                 </small>
