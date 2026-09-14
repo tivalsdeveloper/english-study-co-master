@@ -1,0 +1,2 @@
+alter publication supabase_realtime
+add table public.english_assignment_submissions;
