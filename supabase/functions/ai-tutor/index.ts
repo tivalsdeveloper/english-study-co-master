@@ -12,7 +12,6 @@ Deno.serve(async(req: Request)=>{
   if(body.action==="models")return new Response(JSON.stringify({models:available}),{headers:cors});
   const allowed=new Set(available.map(x=>x.id));
   let model=body.model&&allowed.has(body.model)?body.model:available[0].id;
-  if(body.task==="dictionary"&&allowed.has("free/gemini-3.1-pro"))model="free/gemini-3.1-pro";
   const messages=(body.messages||[]).slice(-12).filter((x:any)=>x&&(x.role==="user"||x.role==="assistant")&&typeof x.content==="string").map((x:any)=>({...x,content:x.content.slice(0,12000)}));
   let system="You are a friendly AI English tutor. Teach clearly, correct mistakes kindly, explain why, and keep answers mobile-friendly.";
   if(body.task==="create-assignment")system="Create a classroom English assignment. Return a clear title, numbered instructions and questions, then a concise marking guide. Match the requested topic, level and total marks. Plain text only.";
@@ -26,17 +25,22 @@ Deno.serve(async(req: Request)=>{
   }
   if(body.context)messages.unshift({role:"user",content:String(body.context).slice(0,16000)});
   if(!messages.length)return new Response(JSON.stringify({error:"Please enter a request."}),{status:400,headers:cors});
-  const useOpenRouter=model==="openrouter/free";
-  const upstream=await fetch(useOpenRouter?"https://openrouter.ai/api/v1/chat/completions":"https://api.apinex.bond/v1/chat/completions",{method:"POST",headers:{Authorization:`Bearer ${useOpenRouter?openRouterKey:key}`,"Content-Type":"application/json",...(useOpenRouter?{"HTTP-Referer":"https://english.tivalsdeveloper.site","X-Title":"English Study Co.Master"}:{})},body:JSON.stringify({model,messages:[{role:"system",content:system},...messages],temperature:.4,max_tokens:1200})});
-  const payload:any=await upstream.json();if(!upstream.ok)throw new Error(payload.error?.message||"The selected model is unavailable.");
-  const reply=payload.choices?.[0]?.message?.content?.trim();if(!reply)throw new Error("The AI returned an empty response.");
-  if(body.task==="dictionary"){
+  const candidates=[model,...available.map(x=>x.id).filter(id=>id!==model)].slice(0,10),failures:string[]=[];
+  for(const candidate of candidates){
    try{
-    const cleaned=reply.replace(/^```(?:json)?\s*/i,"").replace(/\s*```$/,"").trim(),entry=JSON.parse(cleaned);
-    if(!entry?.word||!Array.isArray(entry.meanings)||!entry.meanings.length)throw new Error("invalid dictionary response");
-    return new Response(JSON.stringify({entry,model}),{headers:cors});
-   }catch{throw new Error("The AI could not create a reliable dictionary entry. Please try again.")}
+    const useOpenRouter=candidate==="openrouter/free";
+    const upstream=await fetch(useOpenRouter?"https://openrouter.ai/api/v1/chat/completions":"https://api.apinex.bond/v1/chat/completions",{method:"POST",signal:AbortSignal.timeout(25000),headers:{Authorization:`Bearer ${useOpenRouter?openRouterKey:key}`,"Content-Type":"application/json",...(useOpenRouter?{"HTTP-Referer":"https://english.tivalsdeveloper.site","X-Title":"English Study Co.Master"}:{})},body:JSON.stringify({model:candidate,messages:[{role:"system",content:system},...messages],temperature:.4,max_tokens:1200})});
+    const raw=await upstream.text();let payload:any={};try{payload=JSON.parse(raw)}catch{throw new Error("invalid service response")}
+    if(!upstream.ok)throw new Error(payload.error?.message||`HTTP ${upstream.status}`);
+    const reply=payload.choices?.[0]?.message?.content?.trim();if(!reply)throw new Error("empty response");
+    if(body.task==="dictionary"){
+     const cleaned=reply.replace(/^```(?:json)?\s*/i,"").replace(/\s*```$/,"").trim(),entry=JSON.parse(cleaned);
+     if(!entry?.word||!Array.isArray(entry.meanings)||!entry.meanings.length)throw new Error("invalid dictionary response");
+     return new Response(JSON.stringify({entry,model:candidate,fallbackUsed:candidate!==model}),{headers:cors});
+    }
+    return new Response(JSON.stringify({reply,model:candidate,fallbackUsed:candidate!==model}),{headers:cors});
+   }catch(error){failures.push(`${candidate}: ${error instanceof Error?error.message:"failed"}`)}
   }
-  return new Response(JSON.stringify({reply,model}),{headers:cors});
- }catch(error){return new Response(JSON.stringify({error:error instanceof Error?error.message:"The AI could not process that request."}),{status:500,headers:cors})}
+  return new Response(JSON.stringify({error:"All AI models are temporarily unavailable. Please try again shortly.",attemptedModels:candidates.length,details:failures.slice(0,3)}),{headers:cors});
+ }catch(error){return new Response(JSON.stringify({error:error instanceof Error?error.message:"The AI could not process that request."}),{headers:cors})}
 });
