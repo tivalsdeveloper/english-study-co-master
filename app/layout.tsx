@@ -1,10 +1,6 @@
 import type { Metadata } from "next";
 import Script from "next/script";
 import AccountTools from "./account-tools";
-import "./globals.css";
-import "./otp.css";
-import "./group-room.css";
-import "./account-tools.css";
 
 export const metadata: Metadata = {
   title: "English Study Co.Master",
@@ -21,6 +17,7 @@ export default function RootLayout({
 }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="en">
+      <head><link rel="stylesheet" href="/app.css" /></head>
       <body className="antialiased">
         <a className="skip-link" href="#main-content">
           Skip to main content
