@@ -29,6 +29,7 @@ export default function RootLayout({
           strategy="afterInteractive"
         />
         <Script src="/login-forgot-password.js" strategy="afterInteractive" />
+        <Script src="/ai-media-chat.js" strategy="afterInteractive" />
       </body>
     </html>
   );
