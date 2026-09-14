@@ -16,6 +16,7 @@ Deno.serve(async(req: Request)=>{
   const messages=(body.messages||[]).slice(-12).filter((x:any)=>x&&(x.role==="user"||x.role==="assistant")&&typeof x.content==="string").map((x:any)=>({...x,content:x.content.slice(0,12000)}));
   let system="You are a friendly AI English tutor. Teach clearly, correct mistakes kindly, explain why, and keep answers mobile-friendly.";
   if(body.task==="create-assignment")system="Create a classroom English assignment. Return a clear title, numbered instructions and questions, then a concise marking guide. Match the requested topic, level and total marks. Plain text only.";
+  if(body.task==="create-lesson")system="Create a complete classroom English lesson for the requested topic and level. Include learning objectives, a clear explanation, useful examples, vocabulary where relevant, guided practice, an independent student activity, a quick knowledge check, homework, and short teacher notes. Format it clearly for reading on a phone. Plain text only.";
   if(body.task==="grade-assignment")system="Assist a teacher with marking. Return exactly: SUGGESTED SCORE: [number]; FEEDBACK: [constructive feedback]. Never exceed the maximum mark. The teacher makes the final decision.";
   if(body.task==="dictionary"){
    const word=String(body.word||"").trim().slice(0,80);
