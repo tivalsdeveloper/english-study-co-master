@@ -111,3 +111,8 @@
  .pdf-reader-toolbar{padding:9px 8px}.pdf-reader-toolbar button{padding:8px}.pdf-reader-toolbar button span{display:none}.pdf-reader-page{padding:8px}
  .pdf-reader footer{padding:9px 10px calc(9px + env(safe-area-inset-bottom))}.pdf-reader footer>*{flex:1}.pdf-reader footer .pdf-download{font-size:12px}.pdf-back{padding:9px 7px;font-size:12px}
 }
+
+/* Teacher AI image and video studio launcher */
+.pixazo-launch{position:fixed;right:20px;bottom:274px;z-index:14;display:flex;align-items:center;gap:9px;min-height:52px;padding:13px 17px;border-radius:999px;background:linear-gradient(135deg,#7048c8,#3858c7);color:#fff;font-weight:800;text-decoration:none;box-shadow:0 12px 32px #24104e44}
+.pixazo-launch svg{width:22px}
+@media(max-width:700px){.pixazo-launch{right:14px;bottom:212px;width:54px;height:54px;justify-content:center;padding:0}.pixazo-launch span{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0)}}
