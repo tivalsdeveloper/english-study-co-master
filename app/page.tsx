@@ -3,19 +3,24 @@ import { FormEvent, useEffect, useState } from "react";
 import { createClient, type Session } from "@supabase/supabase-js";
 import {
   Award,
+  BookMarked,
   Bookmark,
   BookOpen,
   Bot,
   CheckCircle,
+  CalendarDays,
   ChevronLeft,
   ChevronRight,
   ClipboardList,
   Download,
   FileText,
+  Headphones,
+  Lightbulb,
   LogOut,
   Menu,
   MessageCircle,
   Monitor,
+  PenLine,
   Search,
   Send,
   Smartphone,
@@ -102,6 +107,16 @@ type SavedWord = {
   definition: string;
   created_at: string;
 };
+
+function LessonContent({ content }: { content: string }) {
+  const blocks = content.split(/\n\s*\n/).filter(Boolean);
+  return <div className="lesson-content">{blocks.map((block, index) => {
+    const lines = block.split("\n"), heading = lines[0].replace(/^#+\s*/, "").replace(/:$/, ""), body = lines.slice(1).join("\n");
+    const kind = /objective|goal/i.test(heading) ? "objectives" : /example/i.test(heading) ? "examples" : /practice|exercise|try/i.test(heading) ? "practice" : "explanation";
+    if (lines.length === 1 && index === 0) return <p className="lesson-intro" key={index}>{block}</p>;
+    return <section className={`lesson-block ${kind}`} key={index}><h4>{kind === "objectives" ? "◎" : kind === "examples" ? "💡" : kind === "practice" ? "✎" : "▣"} {heading}</h4><p>{body || block}</p></section>;
+  })}</div>;
+}
 const lessons = [
   {
     level: "Beginner",
@@ -829,9 +844,10 @@ function AiTutor({ close }: { close: () => void }) {
     }
   }
   const suggestions = [
-    "Correct my English sentence",
-    "Explain verbs simply",
-    "Practise a conversation",
+    { title: "Correct my English sentence", note: "Get instant feedback", icon: <PenLine /> },
+    { title: "Explain verbs simply", note: "Easy examples", icon: <BookOpen /> },
+    { title: "Practise a conversation", note: "Improve your speaking", icon: <MessageCircle /> },
+    { title: "Help with an assignment", note: "Step-by-step support", icon: <ClipboardList /> },
   ];
   return (
     <div className="shade ai-shade">
@@ -840,8 +856,9 @@ function AiTutor({ close }: { close: () => void }) {
           <span>
             <Bot />
             <b>AI English Tutor</b>
-            <small>Free models through APInex</small>
+            <small>Learn · Practise · Improve · Succeed</small>
           </span>
+          <i className="online-pill">● Online</i>
           <button aria-label="Close AI tutor" onClick={close}>
             <X />
           </button>
@@ -883,22 +900,23 @@ function AiTutor({ close }: { close: () => void }) {
           <div className="ai-suggestions">
             {suggestions.map((x) => (
               <button
-                key={x}
+                key={x.title}
                 onClick={() => {
                   const input = document.querySelector<HTMLTextAreaElement>(
                     ".ai-compose textarea",
                   );
                   if (input) {
-                    input.value = x;
+                    input.value = x.title;
                     input.focus();
                   }
                 }}
               >
-                {x}
+                {x.icon}<span><b>{x.title}</b><small>{x.note}</small></span><ChevronRight />
               </button>
             ))}
           </div>
         )}
+        {messages.length === 1 && <div className="ai-topics"><button><Lightbulb />Grammar</button><button><BookOpen />Vocabulary</button><button><Headphones />Listening</button><button><PenLine />Writing</button><button><MessageCircle />Speaking</button></div>}
         <form className="ai-compose" onSubmit={sendMessage}>
           <textarea
             name="message"
@@ -1427,7 +1445,7 @@ function Dictionary({
         <header>
           <span>
             <BookOpen />
-            <b>English dictionary</b>
+            <b>English dictionary<small>Search · Learn · Save · Grow</small></b>
           </span>
           <button aria-label="Close dictionary" onClick={close}>
             <X />
@@ -1528,6 +1546,14 @@ function Dictionary({
                   Search with AI for simple definitions, examples,
                   pronunciation, synonyms and antonyms.
                 </p>
+                <div className="dict-features">
+                  <span><BookOpen /><b>Simple definitions</b><small>Easy to understand</small></span>
+                  <span><FileText /><b>Example sentences</b><small>See how it’s used</small></span>
+                  <span><Volume2 /><b>Pronunciation</b><small>Hear the word</small></span>
+                  <span><ChevronRight /><b>Synonyms</b><small>Similar words</small></span>
+                  <span><ChevronLeft /><b>Antonyms</b><small>Opposite words</small></span>
+                  <span><Bookmark /><b>Save words</b><small>Build your vocabulary</small></span>
+                </div>
               </div>
             )}
           </div>
@@ -1954,8 +1980,10 @@ function Chat({
     <aside className="chat room">
       <header>
         <span>
+          <BookMarked className="room-logo" />
           <b>{group?.name || "Community"}</b>
-          <small>{group?.level || "Choose a group"}</small>
+          <small>English Learning Platform</small>
+          <em>{group?.level || "Choose a group"}</em>
         </span>
         <button onClick={close}>
           <X />
@@ -2002,10 +2030,8 @@ function Chat({
             <div className="published-lessons">
               {items.map((x) => (
                 <article key={x.id}>
-                  <label>{x.level}</label>
-                  <h3>{x.title}</h3>
-                  <small>{new Date(x.created_at).toLocaleDateString()}</small>
-                  <p>{x.content}</p>
+                  <div className="lesson-title"><span><label>{x.level}</label><h3>{x.title}</h3></span><small><CalendarDays />{new Date(x.created_at).toLocaleDateString()}</small></div>
+                  <LessonContent content={x.content} />
                 </article>
               ))}
             </div>
@@ -2037,6 +2063,7 @@ function Chat({
                   <ClipboardList />
                   <span>
                     <b>{item.title}</b>
+                    <em>English practice</em>
                     <small>
                       {item.due_at
                         ? "Due " + new Date(item.due_at).toLocaleString()
@@ -2044,7 +2071,7 @@ function Chat({
                       · {item.max_points} marks
                     </small>
                   </span>
-                  <i>→</i>
+                  <i>Start →</i>
                 </button>
               ))}
             </div>
@@ -2061,6 +2088,8 @@ function Chat({
         </div>
       ) : (
         <>
+          {group && <div className="class-chat-card"><Users /><span><b>Class Chat</b><small>Learn · Ask · Share · Grow Together</small><em>● {Math.max(1, msgs.length)} messages</em></span></div>}
+          {group && <div className="chat-notice">📣 Be respectful, help each other, and keep the conversation in English.</div>}
           <div className="messages">
             {!group ? (
               <Empty
@@ -2091,7 +2120,7 @@ function Chat({
             )}
           </div>
           {group && (
-            <form onSubmit={send}>
+            <><div className="chat-prompts"><button onClick={() => setBody("Can you help me with my assignment?")}>💡 Ask a question</button><button onClick={() => setBody("Please explain this grammar rule.")}>📖 Grammar help</button><button onClick={() => setBody("Can we practise a conversation?")}>🎙 Speaking practice</button></div><form onSubmit={send}>
               <input
                 value={body}
                 onChange={(e) => setBody(e.target.value)}
@@ -2101,7 +2130,7 @@ function Chat({
               <button>
                 <Send />
               </button>
-            </form>
+            </form></>
           )}
         </>
       )}
