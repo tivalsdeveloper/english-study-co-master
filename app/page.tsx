@@ -681,6 +681,12 @@ export default function Home() {
           </button>
         )}
       </div>
+      {p?.role === "teacher" && (
+        <a className="pixazo-launch" href="/studio" aria-label="Open AI image and video studio">
+          <Sparkles />
+          <span>Media Studio</span>
+        </a>
+      )}
       <button
         className="pdf-launch"
         aria-label="Open downloadable PDF lessons"
