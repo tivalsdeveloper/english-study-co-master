@@ -27,7 +27,6 @@ export default function RootLayout({
         </a>
         {children}
         <AccountTools />
-        <Script src="/teacher-ai-lessons.js" strategy="afterInteractive" />
         <Script src="/chat-enhancements.js" strategy="afterInteractive" />
         <Script
           src="/restore-missing-features.js"
