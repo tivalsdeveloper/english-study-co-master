@@ -1,0 +1,3 @@
+# Stability fixes
+
+This branch adds application-level error recovery, a route loading state, a safe not-found page, and a runtime guard prepared for navigation and chat-state isolation. The runtime guard must be loaded by the root layout after existing compatibility scripts. Further refactoring should move chat, lessons, videos, assignments, groups, PDFs, dictionary, profile, and settings out of the large page component into isolated modules.
