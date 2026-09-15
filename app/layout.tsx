@@ -17,6 +17,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
     <html lang="en">
       <head>
         <link rel="stylesheet" href="/app.css" />
+        <link rel="stylesheet" href="/reference-site.css" />
         <link rel="stylesheet" href="/sent-message-color.css" />
       </head>
       <body className="antialiased">
