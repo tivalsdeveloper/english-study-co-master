@@ -1,47 +1,166 @@
-/* AI Tutor: exact sent-message styling */
-.ai-tutor .ai-messages > article.user {
-  align-self: flex-end !important;
-  width: fit-content !important;
-  max-width: 80% !important;
-  margin-left: auto !important;
-  background: #2563eb !important;
-  border: 1px solid #2563eb !important;
-  border-radius: 20px !important;
-  padding: 11px 15px !important;
-  color: #ffffff !important;
-  box-shadow: none !important;
-}
+/* AI Tutor mobile/chat layout correction */
 
-/* Hide the redundant "You" label without affecting the message body. */
-.ai-tutor .ai-messages > article.user > b {
-  display: none !important;
-}
-
-/* The React tree is article.user > .ai-message-content > .ai-answer > .ai-prose. */
-.ai-tutor .ai-messages > article.user > .ai-message-content,
-.ai-tutor .ai-messages > article.user > .ai-message-content > .ai-answer,
-.ai-tutor .ai-messages > article.user > .ai-message-content .ai-prose,
-.ai-tutor .ai-messages > article.user > .ai-message-content .ai-prose p,
-.ai-tutor .ai-messages > article.user > .ai-message-content .ai-prose span,
-.ai-tutor .ai-messages > article.user > .ai-message-content .ai-bullet {
-  background: transparent !important;
-  border: 0 !important;
-  border-radius: 0 !important;
-  box-shadow: none !important;
-  color: #ffffff !important;
-  -webkit-text-fill-color: #ffffff !important;
-}
-
-.ai-tutor .ai-messages > article.user > .ai-message-content .ai-prose p {
+/* Compact model picker: remove the oversized white model row. */
+.ai-tutor > label.ai-model {
+  position: absolute !important;
+  top: 14px !important;
+  right: 112px !important;
+  z-index: 6 !important;
+  width: auto !important;
+  height: 34px !important;
+  min-height: 0 !important;
   margin: 0 !important;
   padding: 0 !important;
+  border: 0 !important;
+  background: transparent !important;
+  color: transparent !important;
+  font-size: 0 !important;
+}
+.ai-tutor > label.ai-model select {
+  width: 145px !important;
+  height: 34px !important;
+  min-height: 0 !important;
+  padding: 0 24px 0 8px !important;
+  border: 0 !important;
+  border-radius: 9px !important;
+  background: rgba(255,255,255,.12) !important;
+  color: #fff !important;
+  font-size: 11px !important;
+  font-weight: 600 !important;
+  box-shadow: none !important;
+}
+.ai-tutor > label.ai-model select option { color:#111 !important; background:#fff !important; }
+
+/* Compact right-aligned sent message. */
+.ai-tutor .ai-messages > article.user {
+  align-self: flex-end !important;
+  display: block !important;
+  width: max-content !important;
+  min-width: 0 !important;
+  max-width: 78% !important;
+  min-height: 0 !important;
+  margin: 8px 0 8px auto !important;
+  padding: 9px 14px !important;
+  background: #2563eb !important;
+  border: 0 !important;
+  border-radius: 18px !important;
+  color: #fff !important;
+  box-shadow: none !important;
+}
+.ai-tutor .ai-messages > article.user > b { display:none !important; }
+.ai-tutor .ai-messages > article.user > .ai-message-content,
+.ai-tutor .ai-messages > article.user .ai-answer,
+.ai-tutor .ai-messages > article.user .ai-prose,
+.ai-tutor .ai-messages > article.user .ai-prose p,
+.ai-tutor .ai-messages > article.user .ai-prose span {
+  display:block !important;
+  width:auto !important;
+  min-width:0 !important;
+  min-height:0 !important;
+  margin:0 !important;
+  padding:0 !important;
+  background:transparent !important;
+  border:0 !important;
+  border-radius:0 !important;
+  box-shadow:none !important;
+  color:#fff !important;
+  -webkit-text-fill-color:#fff !important;
+  line-height:1.45 !important;
+}
+/* Copy belongs to assistant responses; don't enlarge user bubbles with it. */
+.ai-tutor .ai-messages > article.user > .ai-copy-native { display:none !important; }
+
+/* One ChatGPT-style composer bar. */
+.ai-tutor form.ai-compose {
+  position: absolute !important;
+  left: 12px !important;
+  right: 12px !important;
+  bottom: 14px !important;
+  z-index: 40 !important;
+  width: auto !important;
+  min-height: 58px !important;
+  height: auto !important;
+  margin: 0 !important;
+  padding: 7px 56px 7px 54px !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+  background: #303030 !important;
+  border: 1px solid #454545 !important;
+  border-radius: 30px !important;
+  box-shadow: 0 4px 18px rgba(0,0,0,.18) !important;
+}
+.ai-tutor form.ai-compose textarea {
+  display:block !important;
+  flex:1 1 auto !important;
+  width:100% !important;
+  min-width:0 !important;
+  min-height:42px !important;
+  max-height:120px !important;
+  height:42px !important;
+  margin:0 !important;
+  padding:10px 2px !important;
+  border:0 !important;
+  outline:0 !important;
+  border-radius:0 !important;
+  background:transparent !important;
+  box-shadow:none !important;
+  color:#fff !important;
+  font-size:16px !important;
+  line-height:22px !important;
+  resize:none !important;
+}
+.ai-tutor form.ai-compose textarea::placeholder { color:#aaa !important; opacity:1 !important; }
+.ai-tutor form.ai-compose > button[type="submit"] {
+  position:absolute !important;
+  right:8px !important;
+  bottom:8px !important;
+  width:42px !important;
+  height:42px !important;
+  min-width:42px !important;
+  min-height:42px !important;
+  margin:0 !important;
+  padding:0 !important;
+  display:grid !important;
+  place-items:center !important;
+  border:0 !important;
+  border-radius:50% !important;
+  background:#fff !important;
+  color:#111 !important;
+  box-shadow:none !important;
+}
+.ai-tutor form.ai-compose > button[type="submit"] svg { width:20px !important; height:20px !important; }
+
+/* + tool button must live inside the composer. */
+.ai-tutor form.ai-compose .ai-upload-btn {
+  position:absolute !important;
+  left:8px !important;
+  bottom:8px !important;
+  width:42px !important;
+  height:42px !important;
+  min-width:42px !important;
+  min-height:42px !important;
+  margin:0 !important;
+  padding:0 !important;
+  border:0 !important;
+  border-radius:50% !important;
+  background:#3d3d3d !important;
+  color:#fff !important;
+  box-shadow:none !important;
 }
 
-.ai-tutor .ai-messages > article.user .ai-copy-native,
-.ai-tutor .ai-messages > article.user .message-actions,
-.ai-tutor .ai-messages > article.user .ai-message-actions {
-  background: transparent !important;
-  border: 0 !important;
-  color: #ffffff !important;
-  -webkit-text-fill-color: #ffffff !important;
+/* Prevent the disclaimer from overlapping the input. */
+.ai-tutor > .ai-note {
+  position:absolute !important;
+  left:50% !important;
+  bottom:2px !important;
+  transform:translate(-50%,100%) !important;
+  display:none !important;
+}
+.ai-tutor .ai-messages { padding-bottom:92px !important; }
+
+@media (max-width: 600px) {
+  .ai-tutor > label.ai-model { display:none !important; }
+  .ai-tutor form.ai-compose { left:8px !important; right:8px !important; bottom:10px !important; }
+  .ai-tutor .ai-messages > article.user { max-width:82% !important; }
 }
