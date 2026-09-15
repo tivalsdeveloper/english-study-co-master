@@ -1,0 +1,1 @@
+Stability work is isolated on fix/stability-2026-09-15. It adds error recovery, loading and not-found UI, plus runtime and mobile guard assets. Existing production layout remains untouched until review/merge.
