@@ -1,0 +1,24 @@
+/* New reference shell is the only navigation/tool UI. */
+.reference-whole-site .mobile-dock,
+.reference-whole-site .bottom-nav,
+.reference-whole-site .mobile-bottom-nav,
+.reference-whole-site .utility-launchers,
+.reference-whole-site .ai-launch,
+.reference-whole-site .pdf-launch,
+.reference-whole-site .pixazo-launch,
+.reference-whole-site .dictionary-launch,
+.reference-whole-site .chat-launch,
+.reference-whole-site .floating-ai,
+.reference-whole-site .ai-fab,
+.reference-whole-site .pdf-fab {
+  display:none!important;
+  visibility:hidden!important;
+  pointer-events:none!important;
+}
+
+/* No space should remain for the removed legacy mobile dock. */
+@media(max-width:800px){
+  body.reference-whole-site{padding-bottom:0!important}
+  .reference-whole-site .ref-main-content{margin-bottom:12px!important;padding-bottom:16px!important}
+  .ref-more-fab{bottom:18px!important}
+}
