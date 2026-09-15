@@ -23,7 +23,6 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
         <a className="skip-link" href="#main-content">Skip to main content</a>
         {children}
         <AccountTools />
-        {/* Core feature scripts only. Avoid stacking older UI restorers that mutate the same DOM. */}
         <Script src="/login-forgot-password.js" strategy="afterInteractive" />
         <Script src="/ai-media-chat.js" strategy="afterInteractive" />
         <Script src="/ai-study-upload.js" strategy="afterInteractive" />
@@ -32,6 +31,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
         <Script src="/dictionary-search-button.js" strategy="afterInteractive" />
         <Script src="/ai-layout-fix.js" strategy="afterInteractive" />
         <Script src="/menu-upgrades.js" strategy="afterInteractive" />
+        <Script src="/ai-media-session-fix.js" strategy="afterInteractive" />
       </body>
     </html>
   );
