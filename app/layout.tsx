@@ -12,9 +12,7 @@ export const metadata: Metadata = {
   icons: { icon: "/favicon.svg", shortcut: "/favicon.svg" },
 };
 
-export default function RootLayout({
-  children,
-}: Readonly<{ children: React.ReactNode }>) {
+export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="en">
       <head>
@@ -22,15 +20,14 @@ export default function RootLayout({
         <link rel="stylesheet" href="/sent-message-color.css" />
       </head>
       <body className="antialiased">
-        <a className="skip-link" href="#main-content">
-          Skip to main content
-        </a>
+        <a className="skip-link" href="#main-content">Skip to main content</a>
         {children}
         <AccountTools />
         <Script src="/restore-missing-features.js" strategy="afterInteractive" />
         <Script src="/login-forgot-password.js" strategy="afterInteractive" />
         <Script src="/ai-media-chat.js" strategy="afterInteractive" />
         <Script src="/ai-study-upload.js" strategy="afterInteractive" />
+        <Script src="/reference-ai-ui.js" strategy="afterInteractive" />
       </body>
     </html>
   );
