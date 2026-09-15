@@ -17,7 +17,10 @@ export default function RootLayout({
 }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="en">
-      <head><link rel="stylesheet" href="/app.css" /></head>
+      <head>
+        <link rel="stylesheet" href="/app.css" />
+        <link rel="stylesheet" href="/sent-message-color.css" />
+      </head>
       <body className="antialiased">
         <a className="skip-link" href="#main-content">
           Skip to main content
