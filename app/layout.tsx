@@ -33,6 +33,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
         <Script src="/ai-layout-fix.js" strategy="afterInteractive" />
         <Script src="/menu-upgrades.js" strategy="afterInteractive" />
         <Script src="/ai-media-session-fix.js" strategy="afterInteractive" />
+        <Script src="/header-auth-fix.js" strategy="afterInteractive" />
       </body>
     </html>
   );
