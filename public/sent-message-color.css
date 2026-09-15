@@ -1,0 +1,22 @@
+.ai-tutor .ai-messages article.user,
+.ai-tutor .ai-messages article.user *,
+.ai-tutor .ai-messages article.user p,
+.ai-tutor .ai-messages article.user div,
+.ai-tutor .ai-messages article.user span,
+.ai-tutor .ai-messages article.user .ai-message-content {
+  color: #d8eee7 !important;
+  -webkit-text-fill-color: #d8eee7 !important;
+  opacity: 1 !important;
+}
+
+.ai-tutor .ai-messages article.user {
+  background: #24483f !important;
+  border-color: #37685a !important;
+}
+
+.ai-tutor .ai-messages article.user .message-actions,
+.ai-tutor .ai-messages article.user .ai-message-actions,
+.ai-tutor .ai-messages article.user button {
+  color: #a9c9bf !important;
+  -webkit-text-fill-color: #a9c9bf !important;
+}
