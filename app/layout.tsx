@@ -18,6 +18,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
         <link rel="stylesheet" href="/sent-message-color.css" />
         <link rel="stylesheet" href="/shell-cleanup.css" />
         <link rel="stylesheet" href="/ai-layout-fix.css" />
+        <link rel="stylesheet" href="/dictionary-polish.css" />
       </head>
       <body className="antialiased">
         <a className="skip-link" href="#main-content">Skip to main content</a>
