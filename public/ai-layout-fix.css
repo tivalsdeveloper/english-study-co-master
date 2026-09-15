@@ -6,7 +6,9 @@
 .ai-messages>article.user{max-width:82%!important}
 .reference-tools{position:fixed!important;right:12px!important;bottom:112px!important;grid-column:auto!important;grid-row:auto!important;margin:0!important;z-index:80!important}
 .reference-tools.collapsed{width:58px!important}
-.ai-compose{grid-column:2!important;width:calc(100% - 16px)!important;margin:7px 8px 27px!important;padding-right:64px!important}
+.ai-compose{grid-column:2!important;position:relative!important;width:calc(100% - 16px)!important;margin:7px 8px 27px!important;padding:6px 66px 6px 56px!important}
+.ai-compose>button[type="submit"]{position:absolute!important;right:6px!important;left:auto!important;top:50%!important;bottom:auto!important;transform:translateY(-50%)!important;margin:0!important;width:50px!important;height:50px!important;min-width:50px!important;min-height:50px!important;z-index:5!important}
+.ai-compose .ai-upload-btn{position:absolute!important;left:6px!important;right:auto!important;top:50%!important;bottom:auto!important;transform:translateY(-50%)!important;margin:0!important}
 .ai-note{grid-column:2!important}
 }
 /* Functional light mode */
