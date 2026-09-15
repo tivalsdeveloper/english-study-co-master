@@ -1,23 +1,47 @@
-.ai-tutor .ai-messages article.user {
+/* AI Tutor: exact sent-message styling */
+.ai-tutor .ai-messages > article.user {
+  align-self: flex-end !important;
+  width: fit-content !important;
+  max-width: 80% !important;
+  margin-left: auto !important;
   background: #2563eb !important;
-  border-color: #2563eb !important;
+  border: 1px solid #2563eb !important;
+  border-radius: 20px !important;
+  padding: 11px 15px !important;
   color: #ffffff !important;
+  box-shadow: none !important;
 }
 
-.ai-tutor .ai-messages article.user,
-.ai-tutor .ai-messages article.user *,
-.ai-tutor .ai-messages article.user p,
-.ai-tutor .ai-messages article.user div,
-.ai-tutor .ai-messages article.user span,
-.ai-tutor .ai-messages article.user .ai-message-content {
+/* Hide the redundant "You" label without affecting the message body. */
+.ai-tutor .ai-messages > article.user > b {
+  display: none !important;
+}
+
+/* The React tree is article.user > .ai-message-content > .ai-answer > .ai-prose. */
+.ai-tutor .ai-messages > article.user > .ai-message-content,
+.ai-tutor .ai-messages > article.user > .ai-message-content > .ai-answer,
+.ai-tutor .ai-messages > article.user > .ai-message-content .ai-prose,
+.ai-tutor .ai-messages > article.user > .ai-message-content .ai-prose p,
+.ai-tutor .ai-messages > article.user > .ai-message-content .ai-prose span,
+.ai-tutor .ai-messages > article.user > .ai-message-content .ai-bullet {
+  background: transparent !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
   color: #ffffff !important;
   -webkit-text-fill-color: #ffffff !important;
-  opacity: 1 !important;
 }
 
-.ai-tutor .ai-messages article.user .message-actions,
-.ai-tutor .ai-messages article.user .ai-message-actions,
-.ai-tutor .ai-messages article.user button {
+.ai-tutor .ai-messages > article.user > .ai-message-content .ai-prose p {
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+.ai-tutor .ai-messages > article.user .ai-copy-native,
+.ai-tutor .ai-messages > article.user .message-actions,
+.ai-tutor .ai-messages > article.user .ai-message-actions {
+  background: transparent !important;
+  border: 0 !important;
   color: #ffffff !important;
   -webkit-text-fill-color: #ffffff !important;
 }
