@@ -348,10 +348,22 @@ export default function Home() {
       .eq("group_id", g.id)
       .eq("user_id", s.user.id)
       .maybeSingle();
-    if (!data && g.teacher_id !== s.user.id)
-      await db
+    if (!data && g.teacher_id !== s.user.id) {
+      const invite = window.prompt("Enter this group’s invite code to join:");
+      if (!invite || invite.trim().toUpperCase() !== g.invite_code.toUpperCase()) {
+        alert("That invite code is not valid.");
+        setChat(false);
+        return;
+      }
+      const { error: joinError } = await db
         .from("english_group_members")
         .insert({ group_id: g.id, user_id: s.user.id });
+      if (joinError) {
+        alert("The group could not be joined: " + joinError.message);
+        setChat(false);
+        return;
+      }
+    }
     const r = await db
       .from("english_messages")
       .select("id,body,created_at,user_id,english_profiles(username)")
@@ -576,7 +588,7 @@ export default function Home() {
         <div className="panel">
           <header>
             <b>● Community groups</b>
-            {s && (
+            {s && p?.role === "teacher" && (
               <NewGroup
                 userId={s.user.id}
                 add={(g) =>
@@ -833,7 +845,7 @@ function AnswerContent({ text }: { text: string }) {
     return <div className="ai-prose" key={index}>{part.split("\n").map((line, i) => {
       const clean = line.trim();
       if (!clean) return <br key={i}/>;
-      if (/^#{1,3}\s/.test(clean)) return <h3 key={i}><InlineText text={clean.replace(/^#{1,3]\s*/, "")} /></h3>;
+      if (/^#{1,3}\s/.test(clean)) return <h3 key={i}><InlineText text={clean.replace(/^#{1,3}\s*/, "")} /></h3>;
       if (/^[-•*]\s/.test(clean)) return <div className="ai-bullet" key={i}><i>•</i><span><InlineText text={clean.replace(/^[-•*]\s*/, "")} /></span></div>;
       if (/^\d+[.)]\s/.test(clean)) return <div className="ai-bullet numbered" key={i}><i>{clean.match(/^\d+/)?.[0]}</i><span><InlineText text={clean.replace(/^\d+[.)]\s*/, "")} /></span></div>;
       return <p key={i}><InlineText text={clean} /></p>;
@@ -1220,7 +1232,7 @@ function Auth({
     }
     setBusy(true);
     setError("");
-    const { error } = await db.auth.verifyOtp({ email, token, type: "email" });
+    const { error } = await db.auth.verifyOtp({ email, token, type: "signup" });
     if (error) setError(error.message);
     else close();
     setBusy(false);
