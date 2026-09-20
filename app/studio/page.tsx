@@ -1,9 +1,9 @@
 "use client";
 import { FormEvent, useEffect, useState } from "react";
-import { createClient, type Session } from "@supabase/supabase-js";
+import type { Session } from "@supabase/supabase-js";
+import { db } from "../supabase";
 import { ArrowLeft, Download, Image as ImageIcon, LoaderCircle, Sparkles, Video } from "lucide-react";
 
-const db=createClient("https://kxuszpixwfecawdeqkrx.supabase.co","sb_publishable__auyhjNpepXiYdGV5HEJ_A_AGsPbBuS");
 type Kind="image"|"video";
 type StudioResponse={error?:string;request_id?:string;data?:{status?:string;message?:string;[key:string]:unknown};[key:string]:unknown};
 function mediaUrls(value:unknown):string[]{const found:string[]=[];const visit=(v:unknown)=>{if(typeof v==="string"&&/^https?:\/\//i.test(v)&&/\.(png|jpe?g|webp|mp4|webm)(\?|$)/i.test(v))found.push(v);else if(Array.isArray(v))v.forEach(visit);else if(v&&typeof v==="object")Object.values(v as Record<string,unknown>).forEach(visit)};visit(value);return [...new Set(found)]}
