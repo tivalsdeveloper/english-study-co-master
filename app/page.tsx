@@ -1,6 +1,7 @@
 "use client";
 import { FormEvent, useEffect, useRef, useState } from "react";
-import { createClient, type Session } from "@supabase/supabase-js";
+import type { Session } from "@supabase/supabase-js";
+import { db } from "./supabase";
 import {
   Award,
   BookMarked,
@@ -33,10 +34,6 @@ import {
   Volume2,
   X,
 } from "lucide-react";
-const db = createClient(
-  "https://kxuszpixwfecawdeqkrx.supabase.co",
-  "sb_publishable__auyhjNpepXiYdGV5HEJ_A_AGsPbBuS",
-);
 async function callAI<T>(body: Record<string, unknown>): Promise<T> {
   const { data, error } = await db.functions.invoke("ai-tutor", { body });
   if (error)
@@ -334,11 +331,42 @@ export default function Home() {
       .order("created_at", { ascending: false });
     setGroups(data || []);
   }
+  function closePanels() {
+    setSelectedLesson(null);
+    setAuth(false);
+    setChat(false);
+    setDictionary(false);
+    setPdfLibrary(false);
+    setAi(false);
+    setMenu(false);
+  }
+  function openAuth(createAccount = false) {
+    closePanels();
+    setSignup(createAccount);
+    setAuth(true);
+  }
+  function openDictionary() {
+    closePanels();
+    setDictionary(true);
+  }
+  function openDocuments() {
+    closePanels();
+    setPdfLibrary(true);
+  }
+  function openTutor() {
+    closePanels();
+    setAi(true);
+  }
+  function openLesson(lesson: (typeof lessons)[number]) {
+    closePanels();
+    setSelectedLesson(lesson);
+  }
   async function open(g: Group, tab: "lessons" | "chat" = "lessons") {
     if (!s) {
-      setAuth(true);
+      openAuth();
       return;
     }
+    closePanels();
     setGroup(g);
     setRoomTab(tab);
     setChat(true);
@@ -412,7 +440,7 @@ export default function Home() {
               >
                 <UserRound />
               </button>
-              <button className="plain" onClick={() => db.auth.signOut()}>
+              <button className="plain" aria-label="Sign out" onClick={() => db.auth.signOut()}>
                 <LogOut />
               </button>
             </>
@@ -421,8 +449,7 @@ export default function Home() {
               <button
                 className="plain hide-mobile"
                 onClick={() => {
-                  setSignup(false);
-                  setAuth(true);
+                  openAuth();
                 }}
               >
                 Sign in
@@ -430,15 +457,14 @@ export default function Home() {
               <button
                 className="primary"
                 onClick={() => {
-                  setSignup(true);
-                  setAuth(true);
+                  openAuth(true);
                 }}
               >
                 Start learning
               </button>
             </>
           )}
-          <button className="plain hamburger" onClick={() => setMenu(!menu)}>
+          <button className="plain hamburger" aria-label="Open navigation menu" aria-expanded={menu} onClick={() => setMenu(!menu)}>
             <Menu />
           </button>
         </div>
@@ -461,7 +487,7 @@ export default function Home() {
             </a>
             <button
               className="talk"
-              onClick={() => (s ? setChat(true) : setAuth(true))}
+                onClick={() => (s && groups[0] ? open(groups[0], "chat") : openAuth())}
             >
               ▶ Join the conversation
             </button>
@@ -503,7 +529,7 @@ export default function Home() {
                 <label>{l.level}</label>
                 <h3>{l.title}</h3>
                 <p>{l.summary}</p>
-                <button onClick={() => setSelectedLesson(l)}>
+                <button onClick={() => openLesson(l)}>
                   Open lesson ↗
                 </button>
               </article>
@@ -602,7 +628,7 @@ export default function Home() {
             <Empty
               title="Sign in to join the conversation"
               text="Accounts keep every group chat members-only."
-              action={() => setAuth(true)}
+              action={() => openAuth()}
             />
           ) : groups.length ? (
             <div className="group-list">
@@ -671,7 +697,7 @@ export default function Home() {
         <button
           className="dictionary-launch"
           aria-label="Open English dictionary"
-          onClick={() => setDictionary(true)}
+          onClick={openDictionary}
         >
           <BookOpen />
           <span>Dictionary</span>
@@ -702,7 +728,7 @@ export default function Home() {
       <button
         className="pdf-launch"
         aria-label="Open downloadable PDF lessons"
-        onClick={() => setPdfLibrary(true)}
+        onClick={openDocuments}
       >
         <FileText />
         <b>1</b>
@@ -711,7 +737,7 @@ export default function Home() {
       <button
         className="ai-launch"
         aria-label="Open AI English tutor"
-        onClick={() => setAi(true)}
+        onClick={openTutor}
       >
         <Bot />
         <i>
@@ -754,8 +780,7 @@ export default function Home() {
         <button
           className={dictionary ? "active" : ""}
           onClick={() => {
-            setChat(false);
-            setDictionary(true);
+            openDictionary();
           }}
         >
           <Search />
@@ -771,7 +796,7 @@ export default function Home() {
                 : groups[0]
                   ? open(groups[0], "chat")
                   : showMobile("groups")
-              : setAuth(true);
+              : openAuth();
           }}
         >
           <MessageCircle />
@@ -779,15 +804,15 @@ export default function Home() {
         </button>
       </nav>
       {selectedLesson && (
-        <div className="shade">
-          <section className="lesson-modal">
-            <button className="close" onClick={() => setSelectedLesson(null)}>
+        <div className="shade" role="presentation" onMouseDown={(e) => e.target === e.currentTarget && setSelectedLesson(null)}>
+          <section className="lesson-modal" role="dialog" aria-modal="true" aria-labelledby="lesson-title">
+            <button className="close" aria-label="Close lesson" onClick={() => setSelectedLesson(null)}>
               <X />
             </button>
             <label>
               {selectedLesson.level} · {selectedLesson.time}
             </label>
-            <h2>{selectedLesson.title}</h2>
+            <h2 id="lesson-title">{selectedLesson.title}</h2>
             <p>{selectedLesson.content}</p>
             <button className="primary" onClick={() => setSelectedLesson(null)}>
               Finish lesson
@@ -924,12 +949,12 @@ function AiTutor({ close }: { close: () => void }) {
     { title: "Help with an assignment", note: "Step-by-step support", icon: <ClipboardList /> },
   ];
   return (
-    <div className="shade ai-shade">
-      <section className="ai-tutor">
+    <div className="shade ai-shade" role="presentation">
+      <section className="ai-tutor" role="dialog" aria-modal="true" aria-labelledby="ai-tutor-title">
         <header>
           <span>
             <Bot />
-            <b>AI English Tutor</b>
+            <b id="ai-tutor-title">AI English Tutor</b>
             <small>Learn · Practise · Improve · Succeed</small>
           </span>
           <i className="online-pill">● Online</i>
@@ -1031,12 +1056,12 @@ function PdfLibrary({ close }: { close: () => void }) {
       ?.scrollTo({ top: 0, behavior: "smooth" });
   }
   return (
-    <div className="shade pdf-shade">
-      <section className={"pdf-library " + (reading ? "reader-open" : "")}>
+    <div className="shade pdf-shade" role="presentation">
+      <section className={"pdf-library " + (reading ? "reader-open" : "")} role="dialog" aria-modal="true" aria-labelledby="pdf-library-title">
         <header>
           <span>
             <FileText />
-            <b>{reading ? "English Essay Writing" : "PDF lesson library"}</b>
+            <b id="pdf-library-title">{reading ? "English Essay Writing" : "PDF lesson library"}</b>
           </span>
           <button aria-label="Close PDF library" onClick={close}>
             <X />
@@ -1523,12 +1548,12 @@ function Dictionary({
   const entry = entries[0],
     isSaved = entry && saved.some((x) => x.word === entry.word.toLowerCase());
   return (
-    <div className="shade dictionary-shade">
-      <section className="dictionary">
+    <div className="shade dictionary-shade" role="presentation">
+      <section className="dictionary" role="dialog" aria-modal="true" aria-labelledby="dictionary-title">
         <header>
           <span>
             <BookOpen />
-            <b>English dictionary<small>Search · Learn · Save · Grow</small></b>
+            <b id="dictionary-title">English dictionary<small>Search · Learn · Save · Grow</small></b>
           </span>
           <button aria-label="Close dictionary" onClick={close}>
             <X />
@@ -1552,6 +1577,7 @@ function Dictionary({
           <div className="dictionary-body">
             <form onSubmit={lookup}>
               <input
+                aria-label="Type an English word"
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 placeholder="Type an English word…"
