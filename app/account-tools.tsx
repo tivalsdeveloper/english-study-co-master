@@ -1,12 +1,8 @@
 "use client";
 import { FormEvent, useEffect, useState } from "react";
-import { createClient, type Session } from "@supabase/supabase-js";
+import type { Session } from "@supabase/supabase-js";
+import { db } from "./supabase";
 import { KeyRound, LogOut, X } from "lucide-react";
-
-const db = createClient(
-  "https://kxuszpixwfecawdeqkrx.supabase.co",
-  "sb_publishable__auyhjNpepXiYdGV5HEJ_A_AGsPbBuS",
-);
 
 type Profile = { full_name?: string; username?: string; role?: string };
 
