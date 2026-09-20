@@ -9,5 +9,23 @@ export const metadata: Metadata = {
   icons: { icon: "/favicon.svg", shortcut: "/favicon.svg" },
 };
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
-  return <html lang="en"><head><link rel="stylesheet" href="/app.css"/><link rel="stylesheet" href="/reference-site.css"/><link rel="stylesheet" href="/sent-message-color.css"/><link rel="stylesheet" href="/shell-cleanup.css"/><link rel="stylesheet" href="/ai-layout-fix.css"/></head><body className="antialiased"><a className="skip-link" href="#main-content">Skip to main content</a>{children}<AccountTools/><Script src="/restore-missing-features.js" strategy="afterInteractive"/><Script src="/login-forgot-password.js" strategy="afterInteractive"/><Script src="/ai-media-chat.js" strategy="afterInteractive"/><Script src="/ai-media-session-fix.js" strategy="afterInteractive"/><Script src="/ai-study-upload.js" strategy="afterInteractive"/><Script src="/reference-ai-ui.js" strategy="afterInteractive"/><Script src="/reference-whole-site.js" strategy="afterInteractive"/><Script src="/dictionary-search-button.js" strategy="afterInteractive"/><Script src="/ai-layout-fix.js" strategy="afterInteractive"/><Script src="/menu-upgrades.js" strategy="afterInteractive"/></body></html>;
+  return (
+    <html lang="en">
+      <head>
+        <link rel="stylesheet" href="/app.css" />
+        <link rel="stylesheet" href="/site-polish.css" />
+      </head>
+      <body className="antialiased">
+        <a className="skip-link" href="#main-content">Skip to main content</a>
+        {children}
+        <AccountTools />
+        <Script src="/restore-missing-features.js" strategy="afterInteractive" />
+        <Script src="/login-forgot-password.js" strategy="afterInteractive" />
+        <Script src="/ai-media-chat.js" strategy="afterInteractive" />
+        <Script src="/ai-media-session-fix.js" strategy="afterInteractive" />
+        <Script src="/ai-study-upload.js" strategy="afterInteractive" />
+        <Script src="/dictionary-search-button.js" strategy="afterInteractive" />
+      </body>
+    </html>
+  );
 }
